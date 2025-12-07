@@ -9,39 +9,40 @@ export function Navbar() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     return (
-        <nav className="border-b bg-white">
+        <nav className="sticky top-0 z-50 border-b bg-surface/80 backdrop-blur-md">
             <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-                <Link to="/" className="text-2xl font-bold text-slate-900">
-                    ThriftStore
+                <Link to="/" className="text-2xl font-black tracking-tighter text-primary flex items-center gap-2">
+                    <span className="bg-secondary text-secondary-foreground px-2 py-1 rounded-md transform -rotate-2">Thrift</span>
+                    Store
                 </Link>
 
-                <div className="hidden md:flex items-center gap-6">
-                    <Link to="/shop" className="text-sm font-medium hover:text-slate-600">
+                <div className="hidden md:flex items-center gap-8">
+                    <Link to="/shop" className="text-sm font-medium hover:text-accent transition-colors">
                         Shop
                     </Link>
-                    <Link to="/about" className="text-sm font-medium hover:text-slate-600">
+                    <Link to="/about" className="text-sm font-medium hover:text-accent transition-colors">
                         About
                     </Link>
                 </div>
 
                 <div className="hidden md:flex items-center gap-4">
                     <Link to="/cart">
-                        <Button variant="ghost" size="icon">
+                        <Button variant="ghost" size="icon" className="hover:text-accent">
                             <ShoppingCart className="h-5 w-5" />
                         </Button>
                     </Link>
 
                     {user ? (
                         <div className="flex items-center gap-4">
-                            <Link to="/admin" className="text-sm font-medium hover:text-slate-600">
+                            <Link to="/admin" className="text-sm font-medium hover:text-accent">
                                 Admin
                             </Link>
                             <Link to="/profile">
-                                <Button variant="ghost" size="icon">
+                                <Button variant="ghost" size="icon" className="hover:text-accent">
                                     <User className="h-5 w-5" />
                                 </Button>
                             </Link>
-                            <Button onClick={() => logout()} variant="outline">
+                            <Button onClick={() => logout()} variant="outline" className="border-primary hover:bg-primary hover:text-white">
                                 Logout
                             </Button>
                         </div>
@@ -51,14 +52,14 @@ export function Navbar() {
                                 <Button variant="ghost">Login</Button>
                             </Link>
                             <Link to="/register">
-                                <Button>Register</Button>
+                                <Button className="bg-primary text-white hover:bg-primary/90 shadow-md">Register</Button>
                             </Link>
                         </div>
                     )}
                 </div>
 
                 <button
-                    className="md:hidden"
+                    className="md:hidden p-2"
                     onClick={() => setIsMenuOpen(!isMenuOpen)}
                 >
                     <Menu className="h-6 w-6" />
@@ -67,20 +68,20 @@ export function Navbar() {
 
             {/* Mobile Menu */}
             {isMenuOpen && (
-                <div className="md:hidden border-t p-4 space-y-4">
-                    <Link to="/shop" className="block text-sm font-medium">Shop</Link>
-                    <Link to="/cart" className="block text-sm font-medium">Cart</Link>
+                <div className="md:hidden border-t bg-surface p-4 space-y-4 shadow-lg absolute w-full">
+                    <Link to="/shop" className="block text-sm font-medium py-2">Shop</Link>
+                    <Link to="/cart" className="block text-sm font-medium py-2">Cart</Link>
                     {user ? (
                         <>
-                            <Link to="/profile" className="block text-sm font-medium">Profile</Link>
-                            <button onClick={() => logout()} className="block text-sm font-medium text-red-500">
+                            <Link to="/profile" className="block text-sm font-medium py-2">Profile</Link>
+                            <button onClick={() => logout()} className="block text-sm font-medium text-red-500 py-2">
                                 Logout
                             </button>
                         </>
                     ) : (
-                        <div className="flex flex-col gap-2">
+                        <div className="flex flex-col gap-3 pt-2">
                             <Link to="/login"><Button className="w-full" variant="outline">Login</Button></Link>
-                            <Link to="/register"><Button className="w-full">Register</Button></Link>
+                            <Link to="/register"><Button className="w-full bg-primary text-white">Register</Button></Link>
                         </div>
                     )}
                 </div>

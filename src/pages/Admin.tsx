@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { databases } from '@/lib/appwrite';
+import { databases, storage } from '@/lib/appwrite';
 import { ID, Query } from 'appwrite';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -18,7 +18,8 @@ export default function Admin() {
     const [price, setPrice] = useState('');
     const [category, setCategory] = useState('Vintage');
     const [size, setSize] = useState('M');
-    const [imageId, setImageId] = useState('');
+    const [imageFile, setImageFile] = useState<File | null>(null);
+    const [uploading, setUploading] = useState(false);
 
     useEffect(() => {
         if (!authLoading && !user) {
@@ -35,14 +36,23 @@ export default function Admin() {
             setProducts(response.documents);
         } catch (error) {
             console.error('Failed to fetch products:', error);
-        } finally {
-            // Done
         }
     };
 
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();
+        setUploading(true);
         try {
+            let imageId = '';
+            if (imageFile) {
+                const fileUpload = await storage.createFile(
+                    'products',
+                    ID.unique(),
+                    imageFile
+                );
+                imageId = fileUpload.$id;
+            }
+
             await databases.createDocument(
                 'thrift_store',
                 'products',
@@ -61,11 +71,16 @@ export default function Admin() {
             setName('');
             setDescription('');
             setPrice('');
-            setImageId('');
+            setImageFile(null);
+            // Reset file input manually if needed, or just rely on state
+            (document.getElementById('imageInput') as HTMLInputElement).value = '';
+
             fetchProducts();
         } catch (error) {
             console.error('Failed to create product:', error);
             alert('Failed to create product');
+        } finally {
+            setUploading(false);
         }
     };
 
@@ -137,10 +152,17 @@ export default function Admin() {
                             </div>
                         </div>
                         <div>
-                            <label className="block text-sm font-medium mb-1">Image ID (Optional)</label>
-                            <Input value={imageId} onChange={e => setImageId(e.target.value)} placeholder="File ID from Storage" />
+                            <label className="block text-sm font-medium mb-1">Product Image</label>
+                            <Input
+                                id="imageInput"
+                                type="file"
+                                accept="image/*"
+                                onChange={e => setImageFile(e.target.files ? e.target.files[0] : null)}
+                            />
                         </div>
-                        <Button type="submit" className="w-full">Create Product</Button>
+                        <Button type="submit" className="w-full" disabled={uploading}>
+                            {uploading ? 'Creating...' : 'Create Product'}
+                        </Button>
                     </form>
                 </div>
 

@@ -4,6 +4,7 @@ import { databases } from '@/lib/appwrite';
 import { Button } from '@/components/ui/Button';
 import { ArrowLeft } from 'lucide-react';
 import { useCart } from '@/context/useCart';
+import { AppwriteImage } from '@/components/ui/AppwriteImage';
 
 export default function ProductDetails() {
     const { id } = useParams();
@@ -38,8 +39,12 @@ export default function ProductDetails() {
             </Link>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                <div className="aspect-square bg-slate-100 rounded-lg flex items-center justify-center text-slate-400 text-xl">
-                    {product.imageId ? 'Image' : 'No Image'}
+                <div className="aspect-square bg-slate-100 rounded-lg overflow-hidden flex items-center justify-center">
+                    {product.imageId ? (
+                        <AppwriteImage fileId={product.imageId} alt={product.name} />
+                    ) : (
+                        <span className="text-slate-400 text-xl">No Image</span>
+                    )}
                 </div>
 
                 <div className="space-y-6">

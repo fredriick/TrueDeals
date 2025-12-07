@@ -1,3 +1,21 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+    body {
+        @apply bg-background text-primary font-sans antialiased;
+    }
+}
+
+@layer components {
+    .btn-primary {
+        @apply bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm transition-all active:scale-95;
+    }
+
+    .card-hover {
+        @apply transition-all duration-300 hover:shadow-lg hover:-translate-y-1;
+    }
+}

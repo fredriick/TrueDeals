@@ -1,4 +1,4 @@
-import { Client, Databases, Permission, Role } from 'node-appwrite';
+import { Client, Databases, Storage, Permission, Role } from 'node-appwrite';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -19,12 +19,25 @@ const client = new Client()
     .setKey(API_KEY);
 
 const databases = new Databases(client);
+const storage = new Storage(client);
 
 const DB_NAME = 'thrift_store';
+const BUCKET_ID = 'products';
 let dbId = '';
 
 async function setup() {
     try {
+        // 0. Create Storage Bucket
+        console.log('Creating storage bucket...');
+        try {
+            await storage.createBucket(BUCKET_ID, 'Products', [
+                Permission.read(Role.any()),
+                Permission.write(Role.users())
+            ], false, true, undefined, ['jpg', 'png', 'gif', 'jpeg', 'webp']);
+            console.log(`Bucket created: ${BUCKET_ID}`);
+        } catch (error) {
+            console.log('Bucket might already exist.');
+        }
         // 1. Create Database
         console.log('Creating database...');
         try {
