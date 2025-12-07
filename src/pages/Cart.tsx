@@ -6,6 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { databases } from '@/lib/appwrite';
 import { ID } from 'appwrite';
 import { useState } from 'react';
+import { Input } from '@/components/ui/Input';
 import { AppwriteImage } from '@/components/ui/AppwriteImage';
 
 export default function Cart() {
@@ -25,6 +26,9 @@ export default function Cart() {
 
         setLoading(true);
         try {
+            // Simulate payment processing delay
+            await new Promise(resolve => setTimeout(resolve, 2000));
+
             await databases.createDocument(
                 'thrift_store',
                 'orders',
@@ -98,19 +102,34 @@ export default function Cart() {
                     </div>
 
                     {user ? (
-                        <form onSubmit={handleCheckout} className="space-y-4">
+                        <form onSubmit={handleCheckout} className="space-y-6">
                             <div>
                                 <label className="block text-sm font-medium mb-1">Shipping Address</label>
                                 <textarea
-                                    className="w-full border rounded-md px-3 py-2 text-sm min-h-[100px]"
+                                    className="w-full border rounded-md px-3 py-2 text-sm min-h-[80px]"
                                     placeholder="Enter your full address..."
                                     value={address}
                                     onChange={(e) => setAddress(e.target.value)}
                                     required
                                 />
                             </div>
+
+                            <div className="border-t pt-4">
+                                <h3 className="font-bold mb-3">Payment Details</h3>
+                                <div className="space-y-3">
+                                    <Input placeholder="Card Number (Fake)" required pattern="\d{16}" title="Enter 16 digits" />
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <Input placeholder="MM/YY" required />
+                                        <Input placeholder="CVC" required pattern="\d{3}" title="Enter 3 digits" />
+                                    </div>
+                                </div>
+                                <p className="text-xs text-slate-400 mt-2">
+                                    * This is a demo. No real payment is processed.
+                                </p>
+                            </div>
+
                             <Button type="submit" className="w-full" size="lg" disabled={loading}>
-                                {loading ? 'Processing...' : 'Place Order'}
+                                {loading ? 'Processing Payment...' : `Pay $${total().toFixed(2)}`}
                             </Button>
                         </form>
                     ) : (
