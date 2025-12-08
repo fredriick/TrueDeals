@@ -4,12 +4,23 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 // Configuration
-const ENDPOINT = 'https://cloud.appwrite.io/v1';
+// Configuration
+const ENDPOINT = process.env.VITE_APPWRITE_ENDPOINT || 'https://cloud.appwrite.io/v1';
 const PROJECT_ID = process.env.VITE_APPWRITE_PROJECT_ID;
-const API_KEY = process.env.APPWRITE_API_KEY; // Need a server-side API key for this
+const API_KEY = process.env.APPWRITE_API_KEY;
 
-if (!PROJECT_ID || !API_KEY) {
-    console.error('Error: Please set VITE_APPWRITE_PROJECT_ID and APPWRITE_API_KEY environment variables.');
+console.log('--- Setup Debug ---');
+console.log('Endpoint:', ENDPOINT);
+console.log('Project ID:', PROJECT_ID);
+console.log('API Key Length:', API_KEY ? API_KEY.length : 'Missing');
+console.log('API Key Start:', API_KEY ? API_KEY.substring(0, 5) + '...' : 'Missing');
+console.log('-------------------');
+
+if (!API_KEY) {
+    console.error('Error: APPWRITE_API_KEY is missing.');
+    console.error('1. Go to Appwrite Console -> Overview -> Keys.');
+    console.error('2. Create a new API Key with "Select All" scopes.');
+    console.error('3. Add it to your .env file: APPWRITE_API_KEY=your_key_here');
     process.exit(1);
 }
 

@@ -22,10 +22,22 @@ export default function Admin() {
     const [uploading, setUploading] = useState(false);
 
     useEffect(() => {
-        if (!authLoading && !user) {
-            navigate('/login');
+        if (!authLoading) {
+            if (!user) {
+                navigate('/login');
+                return;
+            }
+
+            // Check if user is admin
+            const adminEmail = import.meta.env.VITE_ADMIN_EMAIL;
+            if (adminEmail && user.email !== adminEmail) {
+                alert('Access Denied: You are not an administrator.');
+                navigate('/');
+                return;
+            }
+
+            fetchProducts();
         }
-        fetchProducts();
     }, [user, authLoading]);
 
     const fetchProducts = async () => {
@@ -76,9 +88,9 @@ export default function Admin() {
             (document.getElementById('imageInput') as HTMLInputElement).value = '';
 
             fetchProducts();
-        } catch (error) {
+        } catch (error: any) {
             console.error('Failed to create product:', error);
-            alert('Failed to create product');
+            alert(`Failed to create product: ${error.message || 'Unknown error'}`);
         } finally {
             setUploading(false);
         }
@@ -126,15 +138,12 @@ export default function Admin() {
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-sm font-medium mb-1">Category</label>
-                                <select
-                                    className="w-full border rounded-md px-3 py-2 text-sm"
+                                <Input
                                     value={category}
                                     onChange={e => setCategory(e.target.value)}
-                                >
-                                    <option>Vintage</option>
-                                    <option>Streetwear</option>
-                                    <option>Accessories</option>
-                                </select>
+                                    placeholder="e.g. Vintage, Shoes"
+                                    required
+                                />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium mb-1">Size</label>

@@ -13,10 +13,10 @@ export function AppwriteImage({ fileId, alt, className }: AppwriteImageProps) {
     useEffect(() => {
         if (fileId) {
             try {
-                const url = storage.getFilePreview('products', fileId);
+                const url = storage.getFileView('products', fileId);
                 setImageUrl(url.href);
             } catch (error) {
-                console.error('Failed to get image preview:', error);
+                console.error('Failed to get image view:', error);
             }
         }
     }, [fileId]);
@@ -29,5 +29,11 @@ export function AppwriteImage({ fileId, alt, className }: AppwriteImageProps) {
         );
     }
 
-    return <img src={imageUrl} alt={alt} className={`object-cover w-full h-full ${className}`} />;
+    return (
+        <img
+            src={imageUrl}
+            alt={alt}
+            className={`object-cover w-full h-full ${className}`}
+        />
+    );
 }
