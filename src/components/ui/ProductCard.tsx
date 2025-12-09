@@ -18,11 +18,23 @@ interface ProductCardProps {
     product: Product;
 }
 
+import { useCart } from '@/context/useCart';
+
 export function ProductCard({ product }: ProductCardProps) {
+    const addItem = useCart((state) => state.addItem);
+
+    const handleAddToCart = (e: React.MouseEvent) => {
+        e.preventDefault(); // Prevent navigation if inside a Link
+        addItem(product);
+        alert('Added to cart!');
+    };
+
     return (
         <div className="group relative bg-white border border-slate-100 rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
             <div className="aspect-square bg-slate-50 relative overflow-hidden">
-                {product.imageId ? (
+                {product.images && product.images.length > 0 ? (
+                    <AppwriteImage fileId={product.images[0]} alt={product.name} />
+                ) : product.imageId ? (
                     <AppwriteImage fileId={product.imageId} alt={product.name} />
                 ) : (
                     <div className="w-full h-full flex items-center justify-center text-slate-300 bg-slate-100 font-medium">
@@ -57,7 +69,12 @@ export function ProductCard({ product }: ProductCardProps) {
 
                 <div className="mt-4 flex items-center justify-between">
                     <p className="text-xl font-black text-primary">${product.price.toFixed(2)}</p>
-                    <Button size="sm" className="z-10 relative rounded-full h-10 w-10 p-0 bg-primary hover:bg-accent transition-colors shadow-md">
+                    <Button
+                        size="sm"
+                        className="z-10 relative rounded-full h-10 w-10 p-0 bg-primary hover:bg-accent transition-colors shadow-md"
+                        onClick={handleAddToCart}
+                        disabled={product.status !== 'available'}
+                    >
                         <ShoppingBag className="h-4 w-4 text-white" />
                     </Button>
                 </div>

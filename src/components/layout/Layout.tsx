@@ -10,7 +10,7 @@ export function Layout() {
             </main>
             <footer className="border-t bg-white py-8">
                 <div className="container mx-auto px-4 text-center text-sm text-slate-500">
-                    © 2025 ThriftStore. All rights reserved.
+                    © 2025 TrueDeals. All rights reserved.
                 </div>
             </footer>
         </div>

@@ -3,16 +3,41 @@ import { databases } from '@/lib/appwrite';
 import { Query } from 'appwrite';
 import { ProductCard } from '@/components/ui/ProductCard';
 import { Input } from '@/components/ui/Input';
+import { useSearchParams } from 'react-router-dom';
 
 export default function Shop() {
+    const [searchParams, setSearchParams] = useSearchParams();
     const [products, setProducts] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-    const [category, setCategory] = useState('All');
+    const [categories, setCategories] = useState<string[]>([]);
+
+    const categoryParam = searchParams.get('category');
+    const [category, setCategory] = useState(categoryParam || 'All');
+
+    useEffect(() => {
+        if (categoryParam) {
+            setCategory(categoryParam);
+        }
+    }, [categoryParam]);
 
     useEffect(() => {
         fetchProducts();
+        fetchCategories();
     }, [category]);
+
+    const fetchCategories = async () => {
+        try {
+            const response = await databases.listDocuments('thrift_store', 'categories', [
+                Query.limit(100),
+                Query.orderAsc('name')
+            ]);
+            const uniqueCategories = ['All', ...response.documents.map(d => d.name)];
+            setCategories(uniqueCategories);
+        } catch (error) {
+            console.error('Failed to fetch categories:', error);
+        }
+    };
 
     const fetchProducts = async () => {
         setLoading(true);
@@ -38,6 +63,16 @@ export default function Shop() {
         }
     };
 
+    const handleCategoryChange = (newCategory: string) => {
+        setCategory(newCategory);
+        if (newCategory === 'All') {
+            searchParams.delete('category');
+        } else {
+            searchParams.set('category', newCategory);
+        }
+        setSearchParams(searchParams);
+    };
+
     const filteredProducts = products.filter(product =>
         product.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -57,12 +92,18 @@ export default function Shop() {
                     <select
                         className="border rounded-md px-3 py-2"
                         value={category}
-                        onChange={(e) => setCategory(e.target.value)}
+                        onChange={(e) => handleCategoryChange(e.target.value)}
                     >
-                        <option value="All">All Categories</option>
-                        <option value="Vintage">Vintage</option>
-                        <option value="Streetwear">Streetwear</option>
-                        <option value="Accessories">Accessories</option>
+                        {categories.length > 0 ? (
+                            categories.map(cat => (
+                                <option key={cat} value={cat}>{cat}</option>
+                            ))
+                        ) : (
+                            <>
+                                <option value="All">All Categories</option>
+                                <option value={category}>{category}</option>
+                            </>
+                        )}
                     </select>
                 </div>
             </div>

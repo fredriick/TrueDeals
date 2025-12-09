@@ -4,16 +4,19 @@ import { Button } from '../ui/Button';
 import { useAuth } from '@/context/AuthContext';
 import { useState } from 'react';
 
+import { useCart } from '@/context/useCart';
+
 export function Navbar() {
     const { user, logout } = useAuth();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const cartItems = useCart((state) => state.items);
 
     return (
         <nav className="sticky top-0 z-50 border-b bg-surface/80 backdrop-blur-md">
             <div className="container mx-auto px-4 h-16 flex items-center justify-between">
                 <Link to="/" className="text-2xl font-black tracking-tighter text-primary flex items-center gap-2">
-                    <span className="bg-secondary text-secondary-foreground px-2 py-1 rounded-md transform -rotate-2">Thrift</span>
-                    Store
+                    <span className="bg-secondary text-secondary-foreground px-2 py-1 rounded-md transform -rotate-2">True</span>
+                    Deals
                 </Link>
 
                 <div className="hidden md:flex items-center gap-8">
@@ -26,17 +29,24 @@ export function Navbar() {
                 </div>
 
                 <div className="hidden md:flex items-center gap-4">
-                    <Link to="/cart">
+                    <Link to="/cart" className="relative">
                         <Button variant="ghost" size="icon" className="hover:text-accent">
                             <ShoppingCart className="h-5 w-5" />
+                            {cartItems.reduce((acc, item) => acc + item.quantity, 0) > 0 && (
+                                <span className="absolute -top-1 -right-1 bg-primary text-white text-[10px] font-bold h-4 w-4 flex items-center justify-center rounded-full">
+                                    {cartItems.reduce((acc, item) => acc + item.quantity, 0)}
+                                </span>
+                            )}
                         </Button>
                     </Link>
 
                     {user ? (
                         <div className="flex items-center gap-4">
-                            <Link to="/admin" className="text-sm font-medium hover:text-accent">
-                                Admin
-                            </Link>
+                            {user.email === import.meta.env.VITE_ADMIN_EMAIL && (
+                                <Link to="/admin" className="text-sm font-medium hover:text-accent">
+                                    Admin
+                                </Link>
+                            )}
                             <Link to="/orders" className="text-sm font-medium hover:text-accent">
                                 Orders
                             </Link>

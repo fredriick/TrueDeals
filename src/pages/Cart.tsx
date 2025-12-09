@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/Input';
 import { AppwriteImage } from '@/components/ui/AppwriteImage';
 
 export default function Cart() {
-    const { items, removeItem, total, clearCart } = useCart();
+    const { items, removeItem, updateQuantity, total, clearCart } = useCart();
     const { user } = useAuth();
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
@@ -72,16 +72,37 @@ export default function Cart() {
                 <div className="lg:col-span-2 space-y-4">
                     {items.map((item) => (
                         <div key={item.$id} className="flex items-center gap-4 border p-4 rounded-lg bg-white shadow-sm">
-                            <div className="h-20 w-20 bg-slate-100 rounded overflow-hidden flex items-center justify-center text-xs text-slate-400">
+                            <div className="h-20 w-20 bg-slate-100 rounded overflow-hidden flex items-center justify-center text-xs text-slate-400 flex-shrink-0">
                                 {item.imageId ? (
                                     <AppwriteImage fileId={item.imageId} alt={item.name} />
                                 ) : (
                                     'No Img'
                                 )}
                             </div>
-                            <div className="flex-1">
-                                <h3 className="font-semibold text-lg">{item.name}</h3>
+                            <div className="flex-1 min-w-0">
+                                <h3 className="font-semibold text-lg truncate">{item.name}</h3>
                                 <p className="text-slate-500">${item.price.toFixed(2)}</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 w-8 p-0"
+                                    onClick={() => updateQuantity(item.$id, item.quantity - 1)}
+                                    disabled={item.quantity <= 1}
+                                >
+                                    -
+                                </Button>
+                                <span className="w-8 text-center font-medium">{item.quantity}</span>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 w-8 p-0"
+                                    onClick={() => updateQuantity(item.$id, item.quantity + 1)}
+                                    disabled={item.quantity >= item.maxQuantity}
+                                >
+                                    +
+                                </Button>
                             </div>
                             <Button variant="ghost" size="icon" onClick={() => removeItem(item.$id)}>
                                 <Trash2 className="h-4 w-4 text-red-500" />

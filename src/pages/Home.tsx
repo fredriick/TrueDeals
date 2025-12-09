@@ -1,7 +1,44 @@
+import { useEffect, useState } from 'react';
+import { databases } from '@/lib/appwrite';
+import { Query } from 'appwrite';
 import { Button } from '@/components/ui/Button';
 import { Link } from 'react-router-dom';
 
 export default function Home() {
+    const [categories, setCategories] = useState<string[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchCategories = async () => {
+            try {
+                const response = await databases.listDocuments('thrift_store', 'categories', [
+                    Query.limit(100),
+                    Query.orderAsc('name')
+                ]);
+                const uniqueCategories = response.documents.map(d => d.name);
+                setCategories(uniqueCategories);
+            } catch (error) {
+                console.error('Failed to fetch categories:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchCategories();
+    }, []);
+
+    const getCategoryStyle = (index: number) => {
+        const styles = [
+            { color: 'bg-orange-100', text: 'text-orange-800' },
+            { color: 'bg-blue-100', text: 'text-blue-800' },
+            { color: 'bg-purple-100', text: 'text-purple-800' },
+            { color: 'bg-green-100', text: 'text-green-800' },
+            { color: 'bg-pink-100', text: 'text-pink-800' },
+            { color: 'bg-yellow-100', text: 'text-yellow-800' },
+        ];
+        return styles[index % styles.length];
+    };
+
     return (
         <div className="space-y-16 pb-16">
             {/* Hero Section */}
@@ -36,25 +73,31 @@ export default function Home() {
                     <h2 className="text-3xl font-bold tracking-tight">Shop by Category</h2>
                     <Link to="/shop" className="text-accent hover:underline font-medium">View All &rarr;</Link>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    {[
-                        { name: 'Vintage', color: 'bg-orange-100', text: 'text-orange-800' },
-                        { name: 'Streetwear', color: 'bg-blue-100', text: 'text-blue-800' },
-                        { name: 'Accessories', color: 'bg-purple-100', text: 'text-purple-800' }
-                    ].map((cat) => (
-                        <Link to={`/shop?category=${cat.name}`} key={cat.name} className="group cursor-pointer">
-                            <div className={`aspect-[4/3] ${cat.color} rounded-2xl flex items-center justify-center text-3xl font-black ${cat.text} transition-transform duration-300 group-hover:-translate-y-2 shadow-sm group-hover:shadow-xl`}>
-                                {cat.name}
-                            </div>
-                        </Link>
-                    ))}
-                </div>
+
+                {loading ? (
+                    <div className="text-center py-10 text-slate-500">Loading categories...</div>
+                ) : categories.length > 0 ? (
+                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                        {categories.map((category, index) => {
+                            const style = getCategoryStyle(index);
+                            return (
+                                <Link to={`/shop?category=${category}`} key={category} className="group cursor-pointer">
+                                    <div className={`aspect-[3/2] ${style.color} rounded-xl flex items-center justify-center text-lg font-bold ${style.text} transition-transform duration-300 group-hover:-translate-y-1 shadow-sm group-hover:shadow-md`}>
+                                        {category}
+                                    </div>
+                                </Link>
+                            );
+                        })}
+                    </div>
+                ) : (
+                    <div className="text-center py-10 text-slate-500">No categories found.</div>
+                )}
             </section>
 
             {/* Newsletter / CTA */}
             <section className="container mx-auto px-4">
                 <div className="bg-secondary rounded-3xl p-12 text-center space-y-6">
-                    <h2 className="text-4xl font-bold text-secondary-foreground">Join the Thrift Club</h2>
+                    <h2 className="text-4xl font-bold text-secondary-foreground">Join the TrueDeals Club</h2>
                     <p className="text-lg text-secondary-foreground/80 max-w-xl mx-auto">
                         Get early access to new drops and exclusive discounts.
                     </p>
