@@ -14,6 +14,7 @@ import About from './pages/About';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminProducts from './pages/admin/AdminProducts';
 import AdminCategories from './pages/admin/AdminCategories';
+import AdminOrders from './pages/admin/AdminOrders';
 
 function App() {
     return (
@@ -36,7 +37,7 @@ function App() {
                         <Route index element={<AdminDashboard />} />
                         <Route path="products" element={<AdminProducts />} />
                         <Route path="categories" element={<AdminCategories />} />
-                        <Route path="orders" element={<Orders />} />
+                        <Route path="orders" element={<AdminOrders />} />
                     </Route>
                 </Routes>
             </AuthProvider>

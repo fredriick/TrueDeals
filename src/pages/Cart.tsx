@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Trash2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { databases } from '@/lib/appwrite';
-import { ID } from 'appwrite';
+import { ID, Query } from 'appwrite';
 import { useState } from 'react';
 import { Input } from '@/components/ui/Input';
 import { AppwriteImage } from '@/components/ui/AppwriteImage';
@@ -26,25 +26,56 @@ export default function Cart() {
 
         setLoading(true);
         try {
-            // Simulate payment processing delay
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            // Step 1: Validate stock for all items
+            const stockValidation = await Promise.all(
+                items.map(async (item) => {
+                    const product = await databases.getDocument('thrift_store', 'products', item.$id);
+                    return {
+                        item,
+                        product,
+                        available: product.quantity >= item.quantity
+                    };
+                })
+            );
 
+            // Check if any items are out of stock
+            const outOfStock = stockValidation.filter(v => !v.available);
+            if (outOfStock.length > 0) {
+                const itemNames = outOfStock.map(v => v.item.name).join(', ');
+                alert(`The following items are out of stock or have insufficient quantity: ${itemNames}. Please update your cart.`);
+                setLoading(false);
+                return;
+            }
+
+            // Step 2: Create order
             await databases.createDocument(
                 'thrift_store',
                 'orders',
                 ID.unique(),
                 {
                     userId: user.$id,
-                    items: items.map(i => i.$id),
+                    userEmail: user.email,
+                    items: items,
                     total: total(),
                     status: 'pending',
                     address: address
                 }
             );
 
+            // Step 3: Reduce inventory for each product
+            await Promise.all(
+                stockValidation.map(async ({ item, product }) => {
+                    const newQuantity = product.quantity - item.quantity;
+                    await databases.updateDocument('thrift_store', 'products', item.$id, {
+                        quantity: newQuantity,
+                        status: newQuantity > 0 ? 'available' : 'sold'
+                    });
+                })
+            );
+
             clearCart();
-            alert('Order placed successfully!');
-            navigate('/'); // Redirect to home or order history
+            alert('Order placed successfully! Your items will be shipped soon.');
+            navigate('/admin/orders');
         } catch (error) {
             console.error('Checkout failed:', error);
             alert('Checkout failed. Please try again.');

@@ -69,11 +69,14 @@ export default function Orders() {
                                 <p className="text-sm text-slate-500">Date: {new Date(order.$createdAt).toLocaleDateString()}</p>
                             </div>
                             <div className="mt-2 md:mt-0">
-                                <span className={`px-3 py-1 rounded-full text-sm font-medium ${order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                                        order.status === 'completed' ? 'bg-green-100 text-green-800' :
-                                            'bg-slate-100 text-slate-800'
+                                <span className={`px-3 py-1 rounded-full text-sm font-medium ${(order.status || 'pending') === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                        order.status === 'processing' ? 'bg-blue-100 text-blue-800' :
+                                            order.status === 'shipped' ? 'bg-purple-100 text-purple-800' :
+                                                order.status === 'delivered' ? 'bg-green-100 text-green-800' :
+                                                    order.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                                                        'bg-slate-100 text-slate-800'
                                     }`}>
-                                    {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                                    {(order.status || 'pending').charAt(0).toUpperCase() + (order.status || 'pending').slice(1)}
                                 </span>
                             </div>
                         </div>
