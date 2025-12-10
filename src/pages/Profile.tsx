@@ -4,15 +4,17 @@ import { databases } from '@/lib/appwrite';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { ID, Query } from 'appwrite';
-import { Package, MapPin, Heart, Settings, Trash2, Star } from 'lucide-react';
+import { Package, MapPin, Heart, Settings, Trash2 } from 'lucide-react';
 import { ProductCard } from '@/components/ui/ProductCard';
-import { StarRating } from '@/components/ui/StarRating';
+import { useSearchParams } from 'react-router-dom';
 
 type Tab = 'orders' | 'addresses' | 'wishlist' | 'settings';
 
 export default function Profile() {
     const { user } = useAuth();
-    const [activeTab, setActiveTab] = useState<Tab>('orders');
+    const [searchParams] = useSearchParams();
+    const tabParam = searchParams.get('tab') as Tab;
+    const [activeTab, setActiveTab] = useState<Tab>(tabParam || 'orders');
     const [loading, setLoading] = useState(true);
 
     // Orders
@@ -156,6 +158,9 @@ export default function Profile() {
         try {
             await databases.deleteDocument('thrift_store', 'wishlist', wishlistId);
             fetchWishlist();
+
+            // Dispatch event to update navbar count
+            window.dispatchEvent(new Event('wishlistUpdated'));
         } catch (error) {
             console.error('Failed to remove from wishlist:', error);
         }

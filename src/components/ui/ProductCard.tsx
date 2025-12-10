@@ -93,6 +93,9 @@ export function ProductCard({ product }: ProductCardProps) {
                 setIsInWishlist(true);
                 setWishlistId(doc.$id);
             }
+
+            // Dispatch event to update navbar count
+            window.dispatchEvent(new Event('wishlistUpdated'));
         } catch (error) {
             console.error('Failed to update wishlist:', error);
         }

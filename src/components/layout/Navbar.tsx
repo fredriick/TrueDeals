@@ -1,8 +1,10 @@
 import { Link } from 'react-router-dom';
-import { ShoppingCart, User, Menu } from 'lucide-react';
+import { ShoppingCart, User, Menu, Heart } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { useAuth } from '@/context/AuthContext';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { databases } from '@/lib/appwrite';
+import { Query } from 'appwrite';
 
 import { useCart } from '@/context/useCart';
 
@@ -10,6 +12,40 @@ export function Navbar() {
     const { user, logout } = useAuth();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const cartItems = useCart((state) => state.items);
+    const [wishlistCount, setWishlistCount] = useState(0);
+
+    useEffect(() => {
+        if (user) {
+            fetchWishlistCount();
+
+            // Listen for wishlist updates
+            const handleWishlistUpdate = () => {
+                fetchWishlistCount();
+            };
+
+            window.addEventListener('wishlistUpdated', handleWishlistUpdate);
+
+            return () => {
+                window.removeEventListener('wishlistUpdated', handleWishlistUpdate);
+            };
+        } else {
+            setWishlistCount(0);
+        }
+    }, [user]);
+
+    const fetchWishlistCount = async () => {
+        if (!user) return;
+        try {
+            const response = await databases.listDocuments('thrift_store', 'wishlist', [
+                Query.equal('userId', user.$id),
+                Query.limit(100)
+            ]);
+            setWishlistCount(response.documents.length);
+        } catch (error) {
+            // Wishlist collection might not exist yet
+            console.log('Wishlist not available yet');
+        }
+    };
 
     return (
         <nav className="sticky top-0 z-50 border-b bg-surface/80 backdrop-blur-md">
@@ -39,6 +75,19 @@ export function Navbar() {
                             )}
                         </Button>
                     </Link>
+
+                    {user && (
+                        <Link to="/profile?tab=wishlist" className="relative">
+                            <Button variant="ghost" size="icon" className="hover:text-accent">
+                                <Heart className="h-5 w-5" />
+                                {wishlistCount > 0 && (
+                                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold h-4 w-4 flex items-center justify-center rounded-full">
+                                        {wishlistCount}
+                                    </span>
+                                )}
+                            </Button>
+                        </Link>
+                    )}
 
                     {user ? (
                         <div className="flex items-center gap-4">
@@ -83,9 +132,14 @@ export function Navbar() {
             {isMenuOpen && (
                 <div className="md:hidden border-t bg-surface p-4 space-y-4 shadow-lg absolute w-full">
                     <Link to="/shop" className="block text-sm font-medium py-2">Shop</Link>
-                    <Link to="/cart" className="block text-sm font-medium py-2">Cart</Link>
+                    <Link to="/cart" className="block text-sm font-medium py-2">
+                        Cart {cartItems.reduce((acc, item) => acc + item.quantity, 0) > 0 && `(${cartItems.reduce((acc, item) => acc + item.quantity, 0)})`}
+                    </Link>
                     {user ? (
                         <>
+                            <Link to="/profile?tab=wishlist" className="block text-sm font-medium py-2">
+                                Wishlist {wishlistCount > 0 && `(${wishlistCount})`}
+                            </Link>
                             <Link to="/profile" className="block text-sm font-medium py-2">Profile</Link>
                             <button onClick={() => logout()} className="block text-sm font-medium text-red-500 py-2">
                                 Logout
