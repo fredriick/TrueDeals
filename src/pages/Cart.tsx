@@ -15,6 +15,76 @@ export default function Cart() {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const [address, setAddress] = useState('');
+    const [promoCode, setPromoCode] = useState('');
+    const [coupon, setCoupon] = useState<any>(null);
+    const [discount, setDiscount] = useState(0);
+    const [couponError, setCouponError] = useState('');
+
+    const validateCoupon = async () => {
+        if (!promoCode.trim()) return;
+        setLoading(true);
+        setCouponError('');
+        try {
+            const response = await databases.listDocuments('thrift_store', 'coupons', [
+                Query.equal('code', promoCode.toUpperCase()),
+                Query.equal('isActive', true)
+            ]);
+
+            if (response.documents.length === 0) {
+                setCouponError('Invalid or inactive coupon code');
+                setCoupon(null);
+                setDiscount(0);
+                return;
+            }
+
+            const foundCoupon = response.documents[0];
+            const now = new Date();
+            if (new Date(foundCoupon.expiresAt) < now) {
+                setCouponError('This coupon has expired');
+                setCoupon(null);
+                setDiscount(0);
+                return;
+            }
+
+            if (foundCoupon.usageLimit > 0 && foundCoupon.usageCount >= foundCoupon.usageLimit) {
+                setCouponError('This coupon usage limit has been reached');
+                setCoupon(null);
+                setDiscount(0);
+                return;
+            }
+
+            const currentTotal = total();
+            if (currentTotal < foundCoupon.minPurchase) {
+                setCouponError(`Minimum purchase of $${foundCoupon.minPurchase} required`);
+                setCoupon(null);
+                setDiscount(0);
+                return;
+            }
+
+            // Calculate discount
+            let calculatedDiscount = 0;
+            if (foundCoupon.type === 'percentage') {
+                calculatedDiscount = currentTotal * (foundCoupon.value / 100);
+                if (foundCoupon.maxDiscount > 0) {
+                    calculatedDiscount = Math.min(calculatedDiscount, foundCoupon.maxDiscount);
+                }
+            } else {
+                calculatedDiscount = foundCoupon.value;
+            }
+
+            // Ensure discount doesn't exceed total
+            calculatedDiscount = Math.min(calculatedDiscount, currentTotal);
+
+            setCoupon(foundCoupon);
+            setDiscount(calculatedDiscount);
+            setCouponError('');
+        } catch (error) {
+            console.error('Coupon validation error:', error);
+            setCouponError('Failed to validate coupon');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const handleCheckout = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -56,11 +126,21 @@ export default function Cart() {
                     userId: user.$id,
                     userEmail: user.email,
                     items: items,
-                    total: total(),
+                    total: total() - discount,
+                    subtotal: total(),
+                    discount: discount,
+                    couponCode: coupon ? coupon.code : null,
                     status: 'pending',
                     address: address
                 }
             );
+
+            // Update coupon usage if used
+            if (coupon) {
+                await databases.updateDocument('thrift_store', 'coupons', coupon.$id, {
+                    usageCount: coupon.usageCount + 1
+                });
+            }
 
             // Step 3: Reduce inventory for each product
             await Promise.all(
@@ -148,9 +228,40 @@ export default function Cart() {
                         <span>Subtotal</span>
                         <span>${total().toFixed(2)}</span>
                     </div>
+
+                    {discount > 0 && (
+                        <div className="flex justify-between mb-4 text-green-600">
+                            <span>Discount ({coupon?.code})</span>
+                            <span>-${discount.toFixed(2)}</span>
+                        </div>
+                    )}
+
+                    <div className="flex gap-2 mb-6">
+                        <Input
+                            placeholder="Promo Code"
+                            value={promoCode}
+                            onChange={(e) => setPromoCode(e.target.value)}
+                            disabled={!!coupon}
+                        />
+                        {coupon ? (
+                            <Button variant="outline" onClick={() => {
+                                setCoupon(null);
+                                setDiscount(0);
+                                setPromoCode('');
+                            }}>
+                                Remove
+                            </Button>
+                        ) : (
+                            <Button variant="outline" onClick={validateCoupon} disabled={loading || !promoCode}>
+                                Apply
+                            </Button>
+                        )}
+                    </div>
+                    {couponError && <p className="text-red-500 text-sm mb-4">{couponError}</p>}
+
                     <div className="flex justify-between mb-6 font-bold text-lg border-t pt-4">
                         <span>Total</span>
-                        <span>${total().toFixed(2)}</span>
+                        <span>${(total() - discount).toFixed(2)}</span>
                     </div>
 
                     {user ? (
@@ -181,7 +292,7 @@ export default function Cart() {
                             </div>
 
                             <Button type="submit" className="w-full" size="lg" disabled={loading}>
-                                {loading ? 'Processing Payment...' : `Pay $${total().toFixed(2)}`}
+                                {loading ? 'Processing Payment...' : `Pay $${(total() - discount).toFixed(2)}`}
                             </Button>
                         </form>
                     ) : (

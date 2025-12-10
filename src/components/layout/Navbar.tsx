@@ -96,9 +96,6 @@ export function Navbar() {
                                     Admin
                                 </Link>
                             )}
-                            <Link to="/orders" className="text-sm font-medium hover:text-accent">
-                                Orders
-                            </Link>
                             <Link to="/profile">
                                 <Button variant="ghost" size="icon" className="hover:text-accent">
                                     <User className="h-5 w-5" />

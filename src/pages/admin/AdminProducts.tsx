@@ -20,6 +20,8 @@ export default function AdminProducts() {
     const [category, setCategory] = useState('Vintage');
     const [size, setSize] = useState('M');
     const [quantity, setQuantity] = useState('1');
+    const [salePrice, setSalePrice] = useState('');
+    const [onSale, setOnSale] = useState(false);
     const [imageFiles, setImageFiles] = useState<FileList | null>(null);
     const [uploading, setUploading] = useState(false);
     const [existingImages, setExistingImages] = useState<string[]>([]);
@@ -69,6 +71,8 @@ export default function AdminProducts() {
         setCategory(product.category);
         setSize(product.size);
         setQuantity(product.quantity.toString());
+        setSalePrice(product.salePrice ? product.salePrice.toString() : '');
+        setOnSale(product.onSale || false);
         setImageFiles(null);
         setExistingImages(product.images || []);
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -86,6 +90,8 @@ export default function AdminProducts() {
         setCategory('Vintage');
         setSize('M');
         setQuantity('1');
+        setSalePrice('');
+        setOnSale(false);
         setImageFiles(null);
         setExistingImages([]);
         const fileInput = document.getElementById('imageInput') as HTMLInputElement;
@@ -117,6 +123,8 @@ export default function AdminProducts() {
                 category,
                 size,
                 quantity: parseInt(quantity),
+                salePrice: onSale ? parseFloat(salePrice) : 0,
+                onSale,
                 status: parseInt(quantity) > 0 ? 'available' : 'sold'
             };
 
@@ -239,6 +247,41 @@ export default function AdminProducts() {
                                 <Input type="number" min="0" value={quantity} onChange={e => setQuantity(e.target.value)} required />
                             </div>
                         </div>
+
+                        <div className="bg-slate-50 p-4 rounded-lg border">
+                            <div className="flex items-center gap-2 mb-3">
+                                <input
+                                    type="checkbox"
+                                    id="onSale"
+                                    className="h-4 w-4 rounded border-gray-300"
+                                    checked={onSale}
+                                    onChange={e => setOnSale(e.target.checked)}
+                                />
+                                <label htmlFor="onSale" className="font-medium text-sm text-slate-900 cursor-pointer">
+                                    Put this product on sale
+                                </label>
+                            </div>
+
+                            {onSale && (
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">Sale Price ($)</label>
+                                    <Input
+                                        type="number"
+                                        step="0.01"
+                                        value={salePrice}
+                                        onChange={e => setSalePrice(e.target.value)}
+                                        placeholder="0.00"
+                                        required={onSale}
+                                    />
+                                    {price && salePrice && (
+                                        <p className="text-xs text-green-600 mt-1">
+                                            {((1 - parseFloat(salePrice) / parseFloat(price)) * 100).toFixed(0)}% OFF
+                                        </p>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-sm font-medium mb-1">Category</label>
@@ -397,7 +440,16 @@ export default function AdminProducts() {
                                         <tr key={product.$id} className="border-b last:border-0">
                                             <td className="px-4 py-3 font-medium">{product.name}</td>
                                             <td className="px-4 py-3 text-slate-500">{product.category}</td>
-                                            <td className="px-4 py-3">${product.price.toFixed(2)}</td>
+                                            <td className="px-4 py-3">
+                                                {product.onSale ? (
+                                                    <div>
+                                                        <span className="text-red-600 font-bold">${product.salePrice?.toFixed(2)}</span>
+                                                        <span className="text-slate-400 text-xs line-through ml-2">${product.price.toFixed(2)}</span>
+                                                    </div>
+                                                ) : (
+                                                    `$${product.price.toFixed(2)}`
+                                                )}
+                                            </td>
                                             <td className="px-4 py-3">
                                                 <span className={`px-2 py-1 rounded-full text-xs ${product.status === 'available' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                                                     }`}>

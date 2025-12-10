@@ -17,6 +17,8 @@ interface Product extends Models.Document {
     category: string;
     size: string;
     status: string;
+    salePrice?: number;
+    onSale?: boolean;
 }
 
 interface ProductCardProps {
@@ -129,8 +131,15 @@ export function ProductCard({ product }: ProductCardProps) {
                     </div>
                 )}
 
-                {/* Low Stock Badge */}
-                {product.quantity > 0 && product.quantity < 5 && (
+                {/* Sale Badge */}
+                {product.onSale && product.quantity > 0 && (
+                    <div className="absolute top-3 left-3 bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-md z-10 animate-pulse">
+                        SALE
+                    </div>
+                )}
+
+                {/* Low Stock Badge (Only if not on sale or if on sale but quantity < 5) */}
+                {product.quantity > 0 && product.quantity < 5 && !product.onSale && (
                     <div className="absolute top-3 left-3 bg-yellow-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-sm">
                         Only {product.quantity} left
                     </div>
@@ -172,7 +181,21 @@ export function ProductCard({ product }: ProductCardProps) {
                 </div>
 
                 <div className="mt-4 flex items-center justify-between">
-                    <p className="text-xl font-black text-primary">${product.price.toFixed(2)}</p>
+                    <div>
+                        {product.onSale && product.salePrice ? (
+                            <div className="flex flex-col">
+                                <div className="flex items-center gap-2">
+                                    <p className="text-xl font-black text-red-600">${product.salePrice.toFixed(2)}</p>
+                                    <span className="bg-red-100 text-red-700 text-[10px] font-bold px-1.5 py-0.5 rounded">
+                                        {((1 - product.salePrice / product.price) * 100).toFixed(0)}% OFF
+                                    </span>
+                                </div>
+                                <p className="text-sm text-slate-400 font-medium line-through decoration-slate-400 decoration-2">${product.price.toFixed(2)}</p>
+                            </div>
+                        ) : (
+                            <p className="text-xl font-black text-primary">${product.price.toFixed(2)}</p>
+                        )}
+                    </div>
                     <Button
                         size="sm"
                         className="z-10 relative rounded-full h-10 w-10 p-0 bg-primary hover:bg-accent transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed"

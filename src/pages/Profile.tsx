@@ -223,48 +223,51 @@ export default function Profile() {
                                     No orders yet. Start shopping!
                                 </div>
                             ) : (
-                                orders.map(order => (
-                                    <div key={order.$id} className="bg-white border rounded-lg p-6">
-                                        <div className="flex justify-between items-start mb-4">
-                                            <div>
-                                                <p className="text-sm text-slate-500">Order #{order.$id.slice(0, 8)}</p>
-                                                <p className="text-sm text-slate-500">{new Date(order.$createdAt).toLocaleDateString()}</p>
-                                            </div>
-                                            <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(order.status || 'pending')}`}>
-                                                {(order.status || 'pending').charAt(0).toUpperCase() + (order.status || 'pending').slice(1)}
-                                            </span>
-                                        </div>
-                                        <div className="flex justify-between items-center">
-                                            <div>
-                                                <p className="font-semibold text-lg">${order.total?.toFixed(2)}</p>
-                                                <p className="text-sm text-slate-500">{order.items?.length || 0} items</p>
-                                            </div>
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() => setExpandedOrder(expandedOrder === order.$id ? null : order.$id)}
-                                            >
-                                                {expandedOrder === order.$id ? 'Hide Details' : 'View Details'}
-                                            </Button>
-                                        </div>
-                                        {expandedOrder === order.$id && (
-                                            <div className="mt-4 pt-4 border-t space-y-3">
-                                                {order.items?.map((item: any, index: number) => (
-                                                    <div key={index} className="flex gap-3 text-sm">
-                                                        <div className="flex-1">
-                                                            <p className="font-medium">{item.name}</p>
-                                                            <p className="text-slate-500">Qty: {item.quantity}</p>
-                                                        </div>
-                                                        <p className="font-medium">${(item.price * item.quantity).toFixed(2)}</p>
-                                                    </div>
-                                                ))}
-                                                <div className="pt-3 border-t">
-                                                    <p className="text-sm text-slate-600"><strong>Shipping Address:</strong> {order.address}</p>
+                                orders.map(order => {
+                                    const items = typeof order.items === 'string' ? JSON.parse(order.items || '[]') : (order.items || []);
+                                    return (
+                                        <div key={order.$id} className="bg-white border rounded-lg p-6">
+                                            <div className="flex justify-between items-start mb-4">
+                                                <div>
+                                                    <p className="text-sm text-slate-500">Order #{order.$id.slice(0, 8)}</p>
+                                                    <p className="text-sm text-slate-500">{new Date(order.$createdAt).toLocaleDateString()}</p>
                                                 </div>
+                                                <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(order.status || 'pending')}`}>
+                                                    {(order.status || 'pending').charAt(0).toUpperCase() + (order.status || 'pending').slice(1)}
+                                                </span>
                                             </div>
-                                        )}
-                                    </div>
-                                ))
+                                            <div className="flex justify-between items-center">
+                                                <div>
+                                                    <p className="font-semibold text-lg">${order.total?.toFixed(2)}</p>
+                                                    <p className="text-sm text-slate-500">{order.items?.length || 0} items</p>
+                                                </div>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => setExpandedOrder(expandedOrder === order.$id ? null : order.$id)}
+                                                >
+                                                    {expandedOrder === order.$id ? 'Hide Details' : 'View Details'}
+                                                </Button>
+                                            </div>
+                                            {expandedOrder === order.$id && (
+                                                <div className="mt-4 pt-4 border-t space-y-3">
+                                                    {items.map((item: any, index: number) => (
+                                                        <div key={index} className="flex gap-3 text-sm">
+                                                            <div className="flex-1">
+                                                                <p className="font-medium">{item.name}</p>
+                                                                <p className="text-slate-500">Qty: {item.quantity}</p>
+                                                            </div>
+                                                            <p className="font-medium">${(item.price * item.quantity).toFixed(2)}</p>
+                                                        </div>
+                                                    ))}
+                                                    <div className="pt-3 border-t">
+                                                        <p className="text-sm text-slate-600"><strong>Shipping Address:</strong> {order.address}</p>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })
                             )}
                         </div>
                     )}

@@ -21,6 +21,7 @@ export default function Shop() {
     const [maxPrice, setMaxPrice] = useState('');
     const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
     const [inStockOnly, setInStockOnly] = useState(false);
+    const [onSaleOnly, setOnSaleOnly] = useState(false);
     const [sortBy, setSortBy] = useState('newest');
     const [showFilters, setShowFilters] = useState(false);
 
@@ -89,6 +90,7 @@ export default function Shop() {
         setMaxPrice('');
         setSelectedSizes([]);
         setInStockOnly(false);
+        setOnSaleOnly(false);
         setSortBy('newest');
         searchParams.delete('category');
         setSearchParams(searchParams);
@@ -115,7 +117,10 @@ export default function Shop() {
         // Availability filter
         const matchesAvailability = !inStockOnly || product.quantity > 0;
 
-        return matchesSearch && matchesCategory && matchesPrice && matchesSize && matchesAvailability;
+        // Sale filter
+        const matchesSale = !onSaleOnly || product.onSale;
+
+        return matchesSearch && matchesCategory && matchesPrice && matchesSize && matchesAvailability && matchesSale;
     });
 
     // Apply sorting
@@ -139,7 +144,8 @@ export default function Shop() {
         category !== 'All',
         minPrice !== '' || maxPrice !== '',
         selectedSizes.length > 0,
-        inStockOnly
+        inStockOnly,
+        onSaleOnly
     ].filter(Boolean).length;
 
     return (
@@ -248,8 +254,8 @@ export default function Shop() {
                                         key={size}
                                         onClick={() => toggleSize(size)}
                                         className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${selectedSizes.includes(size)
-                                                ? 'bg-primary text-white'
-                                                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                                            ? 'bg-primary text-white'
+                                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                                             }`}
                                     >
                                         {size}
@@ -260,7 +266,7 @@ export default function Shop() {
 
                         {/* Availability Filter */}
                         <div className="mb-4">
-                            <label className="flex items-center gap-2 cursor-pointer">
+                            <label className="flex items-center gap-2 cursor-pointer mb-2">
                                 <input
                                     type="checkbox"
                                     checked={inStockOnly}
@@ -268,6 +274,15 @@ export default function Shop() {
                                     className="rounded"
                                 />
                                 <span className="text-sm font-medium">In Stock Only</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={onSaleOnly}
+                                    onChange={(e) => setOnSaleOnly(e.target.checked)}
+                                    className="rounded text-red-600 focus:ring-red-500"
+                                />
+                                <span className="text-sm font-medium">On Sale Only</span>
                             </label>
                         </div>
                     </div>
