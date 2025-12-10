@@ -1,12 +1,13 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
 import { Models } from 'appwrite';
-import { ShoppingBag } from 'lucide-react';
+import { ShoppingBag, Heart } from 'lucide-react';
 import { AppwriteImage } from './AppwriteImage';
 import { StarRating } from './StarRating';
 import { useEffect, useState } from 'react';
 import { databases } from '@/lib/appwrite';
-import { Query } from 'appwrite';
+import { ID, Query } from 'appwrite';
+import { useAuth } from '@/context/AuthContext';
 
 interface Product extends Models.Document {
     name: string;
@@ -26,12 +27,18 @@ import { useCart } from '@/context/useCart';
 
 export function ProductCard({ product }: ProductCardProps) {
     const addItem = useCart((state) => state.addItem);
+    const { user } = useAuth();
     const [averageRating, setAverageRating] = useState(0);
     const [reviewCount, setReviewCount] = useState(0);
+    const [isInWishlist, setIsInWishlist] = useState(false);
+    const [wishlistId, setWishlistId] = useState<string | null>(null);
 
     useEffect(() => {
         fetchReviews();
-    }, [product.$id]);
+        if (user) {
+            checkWishlist();
+        }
+    }, [product.$id, user]);
 
     const fetchReviews = async () => {
         try {
@@ -47,6 +54,47 @@ export function ProductCard({ product }: ProductCardProps) {
             }
         } catch (error) {
             // Reviews collection might not exist yet, silently fail
+        }
+    };
+
+    const checkWishlist = async () => {
+        if (!user) return;
+        try {
+            const response = await databases.listDocuments('thrift_store', 'wishlist', [
+                Query.equal('userId', user.$id),
+                Query.equal('productId', product.$id)
+            ]);
+            if (response.documents.length > 0) {
+                setIsInWishlist(true);
+                setWishlistId(response.documents[0].$id);
+            }
+        } catch (error) {
+            // Wishlist collection might not exist yet, silently fail
+        }
+    };
+
+    const toggleWishlist = async (e: React.MouseEvent) => {
+        e.preventDefault();
+        if (!user) {
+            alert('Please sign in to add items to your wishlist');
+            return;
+        }
+
+        try {
+            if (isInWishlist && wishlistId) {
+                await databases.deleteDocument('thrift_store', 'wishlist', wishlistId);
+                setIsInWishlist(false);
+                setWishlistId(null);
+            } else {
+                const doc = await databases.createDocument('thrift_store', 'wishlist', ID.unique(), {
+                    userId: user.$id,
+                    productId: product.$id
+                });
+                setIsInWishlist(true);
+                setWishlistId(doc.$id);
+            }
+        } catch (error) {
+            console.error('Failed to update wishlist:', error);
         }
     };
 
@@ -84,6 +132,17 @@ export function ProductCard({ product }: ProductCardProps) {
                         Only {product.quantity} left
                     </div>
                 )}
+
+                {/* Wishlist Button */}
+                <button
+                    onClick={toggleWishlist}
+                    className="absolute top-3 right-3 bg-white rounded-full p-2 shadow-md hover:scale-110 transition-transform z-10"
+                    title={isInWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
+                >
+                    <Heart
+                        className={`h-5 w-5 ${isInWishlist ? 'fill-red-500 text-red-500' : 'text-slate-400'}`}
+                    />
+                </button>
 
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors" />
             </div>

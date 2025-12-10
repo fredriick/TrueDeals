@@ -134,8 +134,8 @@ export default function ProductDetails() {
                                     key={imgId}
                                     onClick={() => setSelectedImage(imgId)}
                                     className={`relative w-16 h-16 rounded-md overflow-hidden border-2 flex-shrink-0 transition-colors ${(selectedImage === imgId || (!selectedImage && imgId === product.images[0]))
-                                            ? 'border-primary'
-                                            : 'border-slate-200 hover:border-slate-300'
+                                        ? 'border-primary'
+                                        : 'border-slate-200 hover:border-slate-300'
                                         }`}
                                 >
                                     <AppwriteImage fileId={imgId} alt={product.name} />
@@ -170,8 +170,8 @@ export default function ProductDetails() {
                     <div className="pt-6 border-t">
                         <div className="flex items-center justify-between mb-4">
                             <span className={`text-sm font-medium ${product.quantity === 0 ? 'text-red-600' :
-                                    product.quantity < 5 ? 'text-yellow-600' :
-                                        'text-green-600'
+                                product.quantity < 5 ? 'text-yellow-600' :
+                                    'text-green-600'
                                 }`}>
                                 {product.quantity === 0 ? 'Out of Stock' :
                                     product.quantity < 5 ? `Only ${product.quantity} left in stock!` :

@@ -4,133 +4,435 @@ import { databases } from '@/lib/appwrite';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { ID, Query } from 'appwrite';
+import { Package, MapPin, Heart, Settings, Trash2, Star } from 'lucide-react';
+import { ProductCard } from '@/components/ui/ProductCard';
+import { StarRating } from '@/components/ui/StarRating';
+
+type Tab = 'orders' | 'addresses' | 'wishlist' | 'settings';
 
 export default function Profile() {
     const { user } = useAuth();
+    const [activeTab, setActiveTab] = useState<Tab>('orders');
     const [loading, setLoading] = useState(true);
-    const [saving, setSaving] = useState(false);
-    const [profileId, setProfileId] = useState<string | null>(null);
 
-    // Form State
-    const [address, setAddress] = useState('');
-    const [phone, setPhone] = useState('');
+    // Orders
+    const [orders, setOrders] = useState<any[]>([]);
+    const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
+
+    // Addresses
+    const [addresses, setAddresses] = useState<any[]>([]);
+    const [showAddressForm, setShowAddressForm] = useState(false);
+    const [editingAddressId, setEditingAddressId] = useState<string | null>(null);
+    const [addressForm, setAddressForm] = useState({
+        name: '',
+        addressLine1: '',
+        addressLine2: '',
+        city: '',
+        state: '',
+        zipCode: '',
+        country: 'USA',
+        isDefault: false
+    });
+
+    // Wishlist
+    const [wishlist, setWishlist] = useState<any[]>([]);
+    const [wishlistProducts, setWishlistProducts] = useState<any[]>([]);
 
     useEffect(() => {
         if (user) {
-            fetchProfile();
+            fetchData();
         }
-    }, [user]);
+    }, [user, activeTab]);
 
-    const fetchProfile = async () => {
+    const fetchData = async () => {
+        setLoading(true);
         try {
-            const response = await databases.listDocuments(
-                'thrift_store',
-                'profiles',
-                [Query.equal('userId', user!.$id)]
-            );
-
-            if (response.documents.length > 0) {
-                const profile = response.documents[0];
-                setProfileId(profile.$id);
-                setAddress(profile.address || '');
-                setPhone(profile.phone || '');
+            if (activeTab === 'orders') {
+                await fetchOrders();
+            } else if (activeTab === 'addresses') {
+                await fetchAddresses();
+            } else if (activeTab === 'wishlist') {
+                await fetchWishlist();
             }
         } catch (error) {
-            console.error('Failed to fetch profile:', error);
+            console.error('Failed to fetch data:', error);
         } finally {
             setLoading(false);
         }
     };
 
-    const handleSave = async (e: React.FormEvent) => {
+    const fetchOrders = async () => {
+        const response = await databases.listDocuments('thrift_store', 'orders', [
+            Query.equal('userId', user!.$id),
+            Query.orderDesc('$createdAt'),
+            Query.limit(50)
+        ]);
+        setOrders(response.documents);
+    };
+
+    const fetchAddresses = async () => {
+        const response = await databases.listDocuments('thrift_store', 'user_addresses', [
+            Query.equal('userId', user!.$id),
+            Query.limit(20)
+        ]);
+        setAddresses(response.documents);
+    };
+
+    const fetchWishlist = async () => {
+        const response = await databases.listDocuments('thrift_store', 'wishlist', [
+            Query.equal('userId', user!.$id),
+            Query.limit(50)
+        ]);
+        setWishlist(response.documents);
+
+        // Fetch product details
+        const productPromises = response.documents.map(item =>
+            databases.getDocument('thrift_store', 'products', item.productId)
+        );
+        const products = await Promise.all(productPromises);
+        setWishlistProducts(products);
+    };
+
+    const handleSaveAddress = async (e: React.FormEvent) => {
         e.preventDefault();
-        setSaving(true);
         try {
-            if (profileId) {
-                // Update existing profile
-                await databases.updateDocument(
-                    'thrift_store',
-                    'profiles',
-                    profileId,
-                    {
-                        address,
-                        phone
-                    }
-                );
+            if (editingAddressId) {
+                await databases.updateDocument('thrift_store', 'user_addresses', editingAddressId, addressForm);
             } else {
-                // Create new profile
-                const newProfile = await databases.createDocument(
-                    'thrift_store',
-                    'profiles',
-                    ID.unique(),
-                    {
-                        userId: user!.$id,
-                        address,
-                        phone
-                    }
-                );
-                setProfileId(newProfile.$id);
+                await databases.createDocument('thrift_store', 'user_addresses', ID.unique(), {
+                    ...addressForm,
+                    userId: user!.$id
+                });
             }
-            alert('Profile saved successfully!');
-        } catch (error: any) {
-            console.error('Failed to save profile:', error);
-            alert(`Failed to save profile: ${error.message}`);
-        } finally {
-            setSaving(false);
+            setShowAddressForm(false);
+            setEditingAddressId(null);
+            resetAddressForm();
+            fetchAddresses();
+        } catch (error) {
+            console.error('Failed to save address:', error);
+            alert('Failed to save address');
         }
     };
 
-    if (loading) return <div className="p-8 text-center">Loading profile...</div>;
+    const handleDeleteAddress = async (id: string) => {
+        if (!confirm('Delete this address?')) return;
+        try {
+            await databases.deleteDocument('thrift_store', 'user_addresses', id);
+            fetchAddresses();
+        } catch (error) {
+            console.error('Failed to delete address:', error);
+        }
+    };
+
+    const handleEditAddress = (address: any) => {
+        setEditingAddressId(address.$id);
+        setAddressForm({
+            name: address.name,
+            addressLine1: address.addressLine1,
+            addressLine2: address.addressLine2 || '',
+            city: address.city,
+            state: address.state,
+            zipCode: address.zipCode,
+            country: address.country,
+            isDefault: address.isDefault
+        });
+        setShowAddressForm(true);
+    };
+
+    const resetAddressForm = () => {
+        setAddressForm({
+            name: '',
+            addressLine1: '',
+            addressLine2: '',
+            city: '',
+            state: '',
+            zipCode: '',
+            country: 'USA',
+            isDefault: false
+        });
+    };
+
+    const handleRemoveFromWishlist = async (wishlistId: string) => {
+        try {
+            await databases.deleteDocument('thrift_store', 'wishlist', wishlistId);
+            fetchWishlist();
+        } catch (error) {
+            console.error('Failed to remove from wishlist:', error);
+        }
+    };
+
+    const getStatusColor = (status: string) => {
+        const statusMap: Record<string, string> = {
+            pending: 'bg-yellow-100 text-yellow-800',
+            processing: 'bg-blue-100 text-blue-800',
+            shipped: 'bg-purple-100 text-purple-800',
+            delivered: 'bg-green-100 text-green-800',
+            cancelled: 'bg-red-100 text-red-800',
+        };
+        return statusMap[status] || 'bg-slate-100 text-slate-800';
+    };
+
+    const tabs = [
+        { id: 'orders' as Tab, label: 'Orders', icon: Package },
+        { id: 'addresses' as Tab, label: 'Addresses', icon: MapPin },
+        { id: 'wishlist' as Tab, label: 'Wishlist', icon: Heart },
+        { id: 'settings' as Tab, label: 'Settings', icon: Settings },
+    ];
 
     return (
-        <div className="container mx-auto px-4 py-8 max-w-2xl">
+        <div className="container mx-auto px-4 py-8 max-w-6xl">
             <h1 className="text-3xl font-bold mb-8">My Profile</h1>
 
-            <div className="bg-white p-6 rounded-lg border shadow-sm">
-                <div className="mb-6 pb-6 border-b">
-                    <h2 className="text-xl font-semibold mb-4">Account Details</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-slate-500 mb-1">Name</label>
-                            <div className="font-medium">{user?.name}</div>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-slate-500 mb-1">Email</label>
-                            <div className="font-medium">{user?.email}</div>
-                        </div>
-                    </div>
+            {/* Tabs */}
+            <div className="border-b mb-6">
+                <div className="flex gap-8">
+                    {tabs.map(tab => {
+                        const Icon = tab.icon;
+                        return (
+                            <button
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id)}
+                                className={`flex items-center gap-2 pb-4 px-2 border-b-2 transition-colors ${activeTab === tab.id
+                                    ? 'border-primary text-primary font-medium'
+                                    : 'border-transparent text-slate-500 hover:text-slate-700'
+                                    }`}
+                            >
+                                <Icon className="h-5 w-5" />
+                                {tab.label}
+                            </button>
+                        );
+                    })}
                 </div>
-
-                <form onSubmit={handleSave} className="space-y-4">
-                    <h2 className="text-xl font-semibold mb-4">Shipping Information</h2>
-
-                    <div>
-                        <label className="block text-sm font-medium mb-1">Shipping Address</label>
-                        <textarea
-                            className="w-full border rounded-md px-3 py-2 text-sm min-h-[100px]"
-                            value={address}
-                            onChange={(e) => setAddress(e.target.value)}
-                            placeholder="Enter your full shipping address..."
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium mb-1">Phone Number</label>
-                        <Input
-                            type="tel"
-                            value={phone}
-                            onChange={(e) => setPhone(e.target.value)}
-                            placeholder="+1 (555) 000-0000"
-                        />
-                    </div>
-
-                    <div className="pt-4">
-                        <Button type="submit" disabled={saving}>
-                            {saving ? 'Saving...' : 'Save Changes'}
-                        </Button>
-                    </div>
-                </form>
             </div>
+
+            {/* Tab Content */}
+            {loading ? (
+                <div className="text-center py-12 text-slate-500">Loading...</div>
+            ) : (
+                <>
+                    {/* Orders Tab */}
+                    {activeTab === 'orders' && (
+                        <div className="space-y-4">
+                            {orders.length === 0 ? (
+                                <div className="text-center py-12 text-slate-500">
+                                    No orders yet. Start shopping!
+                                </div>
+                            ) : (
+                                orders.map(order => (
+                                    <div key={order.$id} className="bg-white border rounded-lg p-6">
+                                        <div className="flex justify-between items-start mb-4">
+                                            <div>
+                                                <p className="text-sm text-slate-500">Order #{order.$id.slice(0, 8)}</p>
+                                                <p className="text-sm text-slate-500">{new Date(order.$createdAt).toLocaleDateString()}</p>
+                                            </div>
+                                            <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(order.status || 'pending')}`}>
+                                                {(order.status || 'pending').charAt(0).toUpperCase() + (order.status || 'pending').slice(1)}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <div>
+                                                <p className="font-semibold text-lg">${order.total?.toFixed(2)}</p>
+                                                <p className="text-sm text-slate-500">{order.items?.length || 0} items</p>
+                                            </div>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => setExpandedOrder(expandedOrder === order.$id ? null : order.$id)}
+                                            >
+                                                {expandedOrder === order.$id ? 'Hide Details' : 'View Details'}
+                                            </Button>
+                                        </div>
+                                        {expandedOrder === order.$id && (
+                                            <div className="mt-4 pt-4 border-t space-y-3">
+                                                {order.items?.map((item: any, index: number) => (
+                                                    <div key={index} className="flex gap-3 text-sm">
+                                                        <div className="flex-1">
+                                                            <p className="font-medium">{item.name}</p>
+                                                            <p className="text-slate-500">Qty: {item.quantity}</p>
+                                                        </div>
+                                                        <p className="font-medium">${(item.price * item.quantity).toFixed(2)}</p>
+                                                    </div>
+                                                ))}
+                                                <div className="pt-3 border-t">
+                                                    <p className="text-sm text-slate-600"><strong>Shipping Address:</strong> {order.address}</p>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    )}
+
+                    {/* Addresses Tab */}
+                    {activeTab === 'addresses' && (
+                        <div>
+                            <div className="flex justify-between items-center mb-6">
+                                <h2 className="text-xl font-bold">Saved Addresses</h2>
+                                <Button onClick={() => setShowAddressForm(!showAddressForm)}>
+                                    {showAddressForm ? 'Cancel' : '+ Add Address'}
+                                </Button>
+                            </div>
+
+                            {showAddressForm && (
+                                <form onSubmit={handleSaveAddress} className="bg-white border rounded-lg p-6 mb-6">
+                                    <h3 className="font-bold mb-4">{editingAddressId ? 'Edit Address' : 'New Address'}</h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="md:col-span-2">
+                                            <label className="block text-sm font-medium mb-1">Address Name</label>
+                                            <Input
+                                                value={addressForm.name}
+                                                onChange={e => setAddressForm({ ...addressForm, name: e.target.value })}
+                                                placeholder="Home, Work, etc."
+                                                required
+                                            />
+                                        </div>
+                                        <div className="md:col-span-2">
+                                            <label className="block text-sm font-medium mb-1">Address Line 1</label>
+                                            <Input
+                                                value={addressForm.addressLine1}
+                                                onChange={e => setAddressForm({ ...addressForm, addressLine1: e.target.value })}
+                                                required
+                                            />
+                                        </div>
+                                        <div className="md:col-span-2">
+                                            <label className="block text-sm font-medium mb-1">Address Line 2 (Optional)</label>
+                                            <Input
+                                                value={addressForm.addressLine2}
+                                                onChange={e => setAddressForm({ ...addressForm, addressLine2: e.target.value })}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium mb-1">City</label>
+                                            <Input
+                                                value={addressForm.city}
+                                                onChange={e => setAddressForm({ ...addressForm, city: e.target.value })}
+                                                required
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium mb-1">State</label>
+                                            <Input
+                                                value={addressForm.state}
+                                                onChange={e => setAddressForm({ ...addressForm, state: e.target.value })}
+                                                required
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium mb-1">ZIP Code</label>
+                                            <Input
+                                                value={addressForm.zipCode}
+                                                onChange={e => setAddressForm({ ...addressForm, zipCode: e.target.value })}
+                                                required
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium mb-1">Country</label>
+                                            <Input
+                                                value={addressForm.country}
+                                                onChange={e => setAddressForm({ ...addressForm, country: e.target.value })}
+                                                required
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="mt-4 flex gap-2">
+                                        <Button type="submit">Save Address</Button>
+                                        <Button type="button" variant="outline" onClick={() => {
+                                            setShowAddressForm(false);
+                                            setEditingAddressId(null);
+                                            resetAddressForm();
+                                        }}>
+                                            Cancel
+                                        </Button>
+                                    </div>
+                                </form>
+                            )}
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {addresses.length === 0 ? (
+                                    <div className="col-span-2 text-center py-12 text-slate-500">
+                                        No saved addresses. Add one to speed up checkout!
+                                    </div>
+                                ) : (
+                                    addresses.map(address => (
+                                        <div key={address.$id} className="bg-white border rounded-lg p-4">
+                                            <div className="flex justify-between items-start mb-2">
+                                                <h3 className="font-bold">{address.name}</h3>
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        onClick={() => handleEditAddress(address)}
+                                                        className="text-blue-600 hover:text-blue-800 text-sm"
+                                                    >
+                                                        Edit
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeleteAddress(address.$id)}
+                                                        className="text-red-600 hover:text-red-800"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <p className="text-sm text-slate-600">{address.addressLine1}</p>
+                                            {address.addressLine2 && <p className="text-sm text-slate-600">{address.addressLine2}</p>}
+                                            <p className="text-sm text-slate-600">
+                                                {address.city}, {address.state} {address.zipCode}
+                                            </p>
+                                            <p className="text-sm text-slate-600">{address.country}</p>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Wishlist Tab */}
+                    {activeTab === 'wishlist' && (
+                        <div>
+                            {wishlistProducts.length === 0 ? (
+                                <div className="text-center py-12 text-slate-500">
+                                    Your wishlist is empty. Start adding favorites!
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {wishlistProducts.map((product, index) => (
+                                        <div key={product.$id} className="relative">
+                                            <ProductCard product={product} />
+                                            <button
+                                                onClick={() => handleRemoveFromWishlist(wishlist[index].$id)}
+                                                className="absolute top-2 right-2 bg-white rounded-full p-2 shadow-md hover:bg-red-50 z-10"
+                                                title="Remove from wishlist"
+                                            >
+                                                <Trash2 className="h-4 w-4 text-red-600" />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Settings Tab */}
+                    {activeTab === 'settings' && (
+                        <div className="bg-white border rounded-lg p-6 max-w-2xl">
+                            <h2 className="text-xl font-bold mb-6">Account Settings</h2>
+                            <div className="space-y-6">
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">Name</label>
+                                    <Input value={user?.name || ''} disabled />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">Email</label>
+                                    <Input value={user?.email || ''} disabled />
+                                </div>
+                                <p className="text-sm text-slate-500">
+                                    To update your account information, please contact support.
+                                </p>
+                            </div>
+                        </div>
+                    )}
+                </>
+            )}
         </div>
     );
 }

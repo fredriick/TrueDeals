@@ -22,6 +22,7 @@ export default function AdminProducts() {
     const [quantity, setQuantity] = useState('1');
     const [imageFiles, setImageFiles] = useState<FileList | null>(null);
     const [uploading, setUploading] = useState(false);
+    const [existingImages, setExistingImages] = useState<string[]>([]);
 
     const [categories, setCategories] = useState<string[]>([]);
 
@@ -69,6 +70,7 @@ export default function AdminProducts() {
         setSize(product.size);
         setQuantity(product.quantity.toString());
         setImageFiles(null);
+        setExistingImages(product.images || []);
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
@@ -85,6 +87,7 @@ export default function AdminProducts() {
         setSize('M');
         setQuantity('1');
         setImageFiles(null);
+        setExistingImages([]);
         const fileInput = document.getElementById('imageInput') as HTMLInputElement;
         if (fileInput) fileInput.value = '';
     };
@@ -146,6 +149,53 @@ export default function AdminProducts() {
             setProducts(products.filter(p => p.$id !== id));
         } catch (error) {
             console.error('Failed to delete product:', error);
+        }
+    };
+
+    const handleDeleteImage = async (imageId: string) => {
+        if (!confirm('Delete this image?')) return;
+        try {
+            // Delete from storage
+            await storage.deleteFile('products', imageId);
+
+            // Update existing images state
+            const updatedImages = existingImages.filter(id => id !== imageId);
+            setExistingImages(updatedImages);
+
+            // If editing, update the product document
+            if (editingId) {
+                await databases.updateDocument('thrift_store', 'products', editingId, {
+                    images: updatedImages,
+                    imageId: updatedImages[0] || null
+                });
+                fetchProducts();
+            }
+        } catch (error) {
+            console.error('Failed to delete image:', error);
+            alert('Failed to delete image');
+        }
+    };
+
+    const handleSetPrimaryImage = async (imageId: string) => {
+        if (!editingId) return;
+        try {
+            // Reorder images array with selected image first
+            const reorderedImages = [
+                imageId,
+                ...existingImages.filter(id => id !== imageId)
+            ];
+
+            setExistingImages(reorderedImages);
+
+            await databases.updateDocument('thrift_store', 'products', editingId, {
+                images: reorderedImages,
+                imageId: imageId
+            });
+
+            fetchProducts();
+        } catch (error) {
+            console.error('Failed to set primary image:', error);
+            alert('Failed to set primary image');
         }
     };
 
@@ -221,8 +271,57 @@ export default function AdminProducts() {
                                 </select>
                             </div>
                         </div>
+
+                        {/* Existing Images Gallery (Edit Mode) */}
+                        {editingId && existingImages.length > 0 && (
+                            <div>
+                                <label className="block text-sm font-medium mb-2">Current Images</label>
+                                <div className="grid grid-cols-3 gap-3">
+                                    {existingImages.map((imageId, index) => (
+                                        <div key={imageId} className="relative group aspect-square bg-slate-100 rounded-lg overflow-hidden border-2 border-slate-200">
+                                            <AppwriteImage fileId={imageId} alt={`Product image ${index + 1}`} />
+
+                                            {/* Primary Badge */}
+                                            {index === 0 && (
+                                                <div className="absolute top-2 left-2 bg-primary text-white text-xs font-bold px-2 py-1 rounded-full">
+                                                    Primary
+                                                </div>
+                                            )}
+
+                                            {/* Action Buttons */}
+                                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+                                                {index !== 0 && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleSetPrimaryImage(imageId)}
+                                                        className="bg-white text-slate-700 px-2 py-1 rounded text-xs font-medium hover:bg-slate-100"
+                                                        title="Set as primary"
+                                                    >
+                                                        ★ Primary
+                                                    </button>
+                                                )}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleDeleteImage(imageId)}
+                                                    className="bg-red-500 text-white px-2 py-1 rounded text-xs font-medium hover:bg-red-600"
+                                                    title="Delete image"
+                                                >
+                                                    Delete
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                                <p className="text-xs text-slate-500 mt-2">
+                                    Hover over images to manage them. The first image is the primary image shown on product cards.
+                                </p>
+                            </div>
+                        )}
+
                         <div>
-                            <label className="block text-sm font-medium mb-1">Product Images</label>
+                            <label className="block text-sm font-medium mb-1">
+                                {editingId && existingImages.length > 0 ? 'Add More Images' : 'Product Images'}
+                            </label>
                             <Input
                                 id="imageInput"
                                 type="file"
@@ -231,7 +330,7 @@ export default function AdminProducts() {
                                 onChange={e => setImageFiles(e.target.files)}
                             />
                             <p className="text-xs text-slate-500 mt-1">
-                                {editingId ? 'Upload to add/replace images' : 'Hold Ctrl/Cmd to select multiple files'}
+                                {editingId ? 'Upload to add more images' : 'Hold Ctrl/Cmd to select multiple files'}
                             </p>
                         </div>
                         <Button type="submit" className="w-full" disabled={uploading}>
