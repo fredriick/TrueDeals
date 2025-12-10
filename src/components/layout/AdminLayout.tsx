@@ -1,7 +1,7 @@
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useEffect, useState } from 'react';
-import { LayoutDashboard, Package, ShoppingBag, FolderOpen, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingBag, FolderOpen, Menu, X, Tag } from 'lucide-react';
 
 export function AdminLayout() {
     const { user, loading: authLoading } = useAuth();
@@ -30,6 +30,7 @@ export function AdminLayout() {
         { path: '/admin/products', label: 'Products', icon: Package },
         { path: '/admin/orders', label: 'Orders', icon: ShoppingBag },
         { path: '/admin/categories', label: 'Categories', icon: FolderOpen },
+        { path: '/admin/coupons', label: 'Coupons', icon: Tag },
     ];
 
     if (authLoading) return <div className="flex items-center justify-center h-screen">Loading...</div>;
