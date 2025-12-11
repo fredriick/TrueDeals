@@ -3,28 +3,39 @@ import { databases } from '@/lib/appwrite';
 import { Query } from 'appwrite';
 import { Button } from '@/components/ui/Button';
 import { Link } from 'react-router-dom';
+import { ProductCard } from '@/components/ui/ProductCard';
 
 export default function Home() {
     const [categories, setCategories] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
 
+    const [featuredProducts, setFeaturedProducts] = useState<any[]>([]);
+
     useEffect(() => {
-        const fetchCategories = async () => {
+        const loadDat = async () => {
             try {
-                const response = await databases.listDocuments('thrift_store', 'categories', [
+                // Fetch Categories
+                const catsResponse = await databases.listDocuments('thrift_store', 'categories', [
                     Query.limit(100),
                     Query.orderAsc('name')
                 ]);
-                const uniqueCategories = response.documents.map(d => d.name);
-                setCategories(uniqueCategories);
+                setCategories(catsResponse.documents.map(d => d.name));
+
+                // Fetch Featured Products (Newest 4)
+                const productsResponse = await databases.listDocuments('thrift_store', 'products', [
+                    Query.limit(4),
+                    Query.orderDesc('$createdAt'),
+                    Query.equal('status', 'available')
+                ]);
+                setFeaturedProducts(productsResponse.documents);
             } catch (error) {
-                console.error('Failed to fetch categories:', error);
+                console.error('Failed to fetch data:', error);
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchCategories();
+        loadDat();
     }, []);
 
     const getCategoryStyle = (index: number) => {
@@ -94,24 +105,24 @@ export default function Home() {
                 )}
             </section>
 
-            {/* Newsletter / CTA */}
+            {/* Featured Products */}
             <section className="container mx-auto px-4">
-                <div className="bg-secondary rounded-3xl p-12 text-center space-y-6">
-                    <h2 className="text-4xl font-bold text-secondary-foreground">Join the TrueDeals Club</h2>
-                    <p className="text-lg text-secondary-foreground/80 max-w-xl mx-auto">
-                        Get early access to new drops and exclusive discounts.
-                    </p>
-                    <div className="flex max-w-md mx-auto gap-4">
-                        <input
-                            type="email"
-                            placeholder="Enter your email"
-                            className="flex-1 px-4 py-3 rounded-lg border-0 focus:ring-2 focus:ring-primary"
-                        />
-                        <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
-                            Subscribe
-                        </Button>
-                    </div>
+                <div className="flex items-center justify-between mb-10">
+                    <h2 className="text-3xl font-bold tracking-tight">New Arrivals</h2>
+                    <Link to="/shop" className="text-accent hover:underline font-medium">Shop All &rarr;</Link>
                 </div>
+
+                {loading ? (
+                    <div className="text-center py-10 text-slate-500">Loading products...</div>
+                ) : featuredProducts.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                        {featuredProducts.map(product => (
+                            <ProductCard key={product.$id} product={product} />
+                        ))}
+                    </div>
+                ) : (
+                    <div className="text-center py-10 text-slate-500">No products found.</div>
+                )}
             </section>
         </div>
     );
