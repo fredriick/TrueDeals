@@ -8,6 +8,7 @@ import { ID, Query } from 'appwrite';
 import { useState } from 'react';
 import { Input } from '@/components/ui/Input';
 import { AppwriteImage } from '@/components/ui/AppwriteImage';
+import { PaymentButton } from '@/components/ui/PaymentButton'; // Ensure this exists
 
 export default function Cart() {
     const { items, removeItem, updateQuantity, total, clearCart } = useCart();
@@ -86,17 +87,11 @@ export default function Cart() {
         }
     };
 
-    const handleCheckout = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!user) return;
-        if (!address.trim()) {
-            alert('Please enter a shipping address');
-            return;
-        }
-
+    const handlePaymentSuccess = async (reference: any) => {
+        console.log('Payment success:', reference);
         setLoading(true);
         try {
-            // Step 1: Validate stock for all items
+            // Step 1: Validate stock
             const stockValidation = await Promise.all(
                 items.map(async (item) => {
                     const product = await databases.getDocument('thrift_store', 'products', item.$id);
@@ -123,26 +118,27 @@ export default function Cart() {
                 'orders',
                 ID.unique(),
                 {
-                    userId: user.$id,
-                    userEmail: user.email,
+                    userId: user?.$id,
+                    userEmail: user?.email,
                     items: items,
                     total: total() - discount,
                     subtotal: total(),
                     discount: discount,
                     couponCode: coupon ? coupon.code : null,
-                    status: 'pending',
+                    status: 'paid',
+                    paymentReference: reference.reference,
                     address: address
                 }
             );
 
-            // Update coupon usage if used
+            // Update coupon usage
             if (coupon) {
                 await databases.updateDocument('thrift_store', 'coupons', coupon.$id, {
                     usageCount: coupon.usageCount + 1
                 });
             }
 
-            // Step 3: Reduce inventory for each product
+            // Step 3: Reduce inventory
             await Promise.all(
                 stockValidation.map(async ({ item, product }) => {
                     const newQuantity = product.quantity - item.quantity;
@@ -154,14 +150,19 @@ export default function Cart() {
             );
 
             clearCart();
-            alert('Order placed successfully! Your items will be shipped soon.');
-            navigate('/admin/orders');
+            alert('Payment successful! Your order has been placed.');
+            navigate('/orders');
         } catch (error) {
-            console.error('Checkout failed:', error);
-            alert('Checkout failed. Please try again.');
+            console.error('Order creation failed:', error);
+            alert('Payment successful but order creation failed. Please contact support.');
         } finally {
             setLoading(false);
         }
+    };
+
+    const handlePaymentClose = () => {
+        alert('Payment cancelled.');
+        setLoading(false);
     };
 
     if (items.length === 0) {
@@ -265,7 +266,7 @@ export default function Cart() {
                     </div>
 
                     {user ? (
-                        <form onSubmit={handleCheckout} className="space-y-6">
+                        <div className="space-y-6">
                             <div>
                                 <label className="block text-sm font-medium mb-1">Shipping Address</label>
                                 <textarea
@@ -278,23 +279,26 @@ export default function Cart() {
                             </div>
 
                             <div className="border-t pt-4">
-                                <h3 className="font-bold mb-3">Payment Details</h3>
-                                <div className="space-y-3">
-                                    <Input placeholder="Card Number (Fake)" required pattern="\d{16}" title="Enter 16 digits" />
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <Input placeholder="MM/YY" required />
-                                        <Input placeholder="CVC" required pattern="\d{3}" title="Enter 3 digits" />
-                                    </div>
-                                </div>
-                                <p className="text-xs text-slate-400 mt-2">
-                                    * This is a demo. No real payment is processed.
+                                <h3 className="font-bold mb-3">Payment</h3>
+                                <p className="text-sm text-slate-500 mb-4">
+                                    Secured by Paystack. You will be redirected to complete payment.
                                 </p>
-                            </div>
 
-                            <Button type="submit" className="w-full" size="lg" disabled={loading}>
-                                {loading ? 'Processing Payment...' : `Pay $${(total() - discount).toFixed(2)}`}
-                            </Button>
-                        </form>
+                                {address.trim().length > 5 ? (
+                                    <PaymentButton
+                                        amount={total() - discount}
+                                        email={user.email}
+                                        onSuccess={handlePaymentSuccess}
+                                        onClose={handlePaymentClose}
+                                        disabled={loading}
+                                    />
+                                ) : (
+                                    <Button disabled className="w-full">
+                                        Enter Address to Pay
+                                    </Button>
+                                )}
+                            </div>
+                        </div>
                     ) : (
                         <Link to="/login">
                             <Button className="w-full" size="lg" variant="outline">
