@@ -1,0 +1,4 @@
+Starting schema fix...
+paymentReference creation skipped: Attribute with the requested key already exists. Attribute keys must be unique, try again with a different key.
+items attribute found. Type: string, IsArray: true
+Schema fix finished.

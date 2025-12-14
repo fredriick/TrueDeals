@@ -1,0 +1,5 @@
+--- Starting Order Creation Test ---
+Attempt 1: Items as JSON String
+FAILED: Items as JSON String. Error: Invalid document structure: Unknown attribute: "userEmail"
+Attempt 2: Items as Array of Strings (String Array)
+FAILED: Items as Array of JSON Strings. Error: iString is not defined

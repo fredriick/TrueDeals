@@ -120,7 +120,7 @@ export default function Cart() {
                 {
                     userId: user?.$id,
                     userEmail: user?.email,
-                    items: items,
+                    items: items.map(i => JSON.stringify(i)), // Store each item as a JSON string in the array
                     total: total() - discount,
                     subtotal: total(),
                     discount: discount,
@@ -141,9 +141,12 @@ export default function Cart() {
             // Step 3: Reduce inventory
             await Promise.all(
                 stockValidation.map(async ({ item, product }) => {
-                    const newQuantity = product.quantity - item.quantity;
+                    // Ensure we don't send negative
+                    const newQuantity = Math.max(0, product.quantity - item.quantity);
+
                     await databases.updateDocument('thrift_store', 'products', item.$id, {
                         quantity: newQuantity,
+                        // If newQuantity is 0, status is sold
                         status: newQuantity > 0 ? 'available' : 'sold'
                     });
                 })
