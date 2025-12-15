@@ -5,7 +5,7 @@ import { Trash2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { databases } from '@/lib/appwrite';
 import { ID, Query } from 'appwrite';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/Input';
 import { AppwriteImage } from '@/components/ui/AppwriteImage';
 import { PaymentButton } from '@/components/ui/PaymentButton'; // Ensure this exists
@@ -20,6 +20,26 @@ export default function Cart() {
     const [coupon, setCoupon] = useState<any>(null);
     const [discount, setDiscount] = useState(0);
     const [couponError, setCouponError] = useState('');
+    const [savedAddresses, setSavedAddresses] = useState<any[]>([]);
+
+    // Fetch saved addresses
+    // Fetch saved addresses
+    useEffect(() => {
+        if (user && user.$id) {
+            const fetchAddresses = async () => {
+                try {
+                    const response = await databases.listDocuments('thrift_store', 'user_addresses', [
+                        Query.equal('userId', user.$id),
+                        Query.limit(10)
+                    ]);
+                    setSavedAddresses(response.documents || []);
+                } catch (error) {
+                    console.error('Failed to fetch addresses:', error);
+                }
+            };
+            fetchAddresses();
+        }
+    }, [user]);
 
     const validateCoupon = async () => {
         if (!promoCode.trim()) return;
@@ -272,6 +292,47 @@ export default function Cart() {
                         <div className="space-y-6">
                             <div>
                                 <label className="block text-sm font-medium mb-1">Shipping Address</label>
+
+                                {savedAddresses && savedAddresses.length > 0 && (
+                                    <div className="mb-2">
+                                        <select
+                                            className="w-full border rounded-md px-3 py-2 text-sm bg-slate-50 mb-2"
+                                            onChange={(e) => {
+                                                if (e.target.value) {
+                                                    setAddress(e.target.value);
+                                                    // By forcing value={""}, this onChange fires even if the same address is selected again
+                                                    e.target.value = "";
+                                                }
+                                            }}
+                                            value="" // Always controlled as empty to allow re-selection
+                                        >
+                                            <option value="" disabled>-- Select a saved address --</option>
+                                            {savedAddresses.map((addr) => {
+                                                if (!addr) return null;
+                                                // Create a comprehensive address string including the name (often used for building/company name)
+                                                // and all address components.
+                                                const components = [
+                                                    addr.name,
+                                                    addr.addressLine1,
+                                                    addr.addressLine2,
+                                                    addr.city,
+                                                    addr.state,
+                                                    addr.zipCode
+                                                ].filter(Boolean); // Remove empty values
+
+                                                const fullAddressString = components.join(', ');
+
+                                                return (
+                                                    <option key={addr.$id} value={fullAddressString}>
+                                                        {fullAddressString}
+                                                    </option>
+                                                );
+                                            })}
+                                        </select>
+                                        <p className="text-xs text-slate-400 text-center mb-2">- OR -</p>
+                                    </div>
+                                )}
+
                                 <textarea
                                     className="w-full border rounded-md px-3 py-2 text-sm min-h-[80px]"
                                     placeholder="Enter your full address..."
