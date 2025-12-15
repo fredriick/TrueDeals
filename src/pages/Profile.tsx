@@ -87,12 +87,41 @@ export default function Profile() {
         ]);
         setWishlist(response.documents);
 
-        // Fetch product details
-        const productPromises = response.documents.map(item =>
-            databases.getDocument('thrift_store', 'products', item.productId)
+        // Fetch product details with error handling
+        const results = await Promise.all(
+            response.documents.map(async (item) => {
+                try {
+                    const product = await databases.getDocument('thrift_store', 'products', item.productId);
+                    return { status: 'fulfilled', product, wishlistId: item.$id };
+                } catch (error) {
+                    return { status: 'rejected', wishlistId: item.$id };
+                }
+            })
         );
-        const products = await Promise.all(productPromises);
-        setWishlistProducts(products);
+
+        // Filter valid products
+        const validItems = results
+            .filter((r): r is { status: 'fulfilled', product: any, wishlistId: string } => r.status === 'fulfilled')
+            .map(r => r.product);
+
+        setWishlistProducts(validItems);
+
+        // Cleanup orphans (items with deleted products)
+        const orphans = results.filter(r => r.status === 'rejected');
+        if (orphans.length > 0) {
+            console.log(`Cleaning up ${orphans.length} orphaned wishlist items...`);
+            await Promise.all(
+                orphans.map(orphan =>
+                    databases.deleteDocument('thrift_store', 'wishlist', orphan.wishlistId)
+                )
+            );
+            // Update navbar count
+            window.dispatchEvent(new Event('wishlistUpdated'));
+
+            // Re-fetch wishlist to ensure state consistency (optional but cleaner)
+            const validWishlistDocs = response.documents.filter(doc => !orphans.find(o => o.wishlistId === doc.$id));
+            setWishlist(validWishlistDocs);
+        }
     };
 
     const handleSaveAddress = async (e: React.FormEvent) => {
@@ -224,7 +253,18 @@ export default function Profile() {
                                 </div>
                             ) : (
                                 orders.map(order => {
-                                    const items = typeof order.items === 'string' ? JSON.parse(order.items || '[]') : (order.items || []);
+                                    // Robust item parsing
+                                    let items: any[] = [];
+                                    try {
+                                        if (typeof order.items === 'string') {
+                                            items = JSON.parse(order.items);
+                                        } else if (Array.isArray(order.items)) {
+                                            items = order.items.map((i: any) => typeof i === 'string' ? JSON.parse(i) : i);
+                                        }
+                                    } catch (e) {
+                                        items = [];
+                                    }
+
                                     return (
                                         <div key={order.$id} className="bg-white border rounded-lg p-6">
                                             <div className="flex justify-between items-start mb-4">
@@ -239,7 +279,7 @@ export default function Profile() {
                                             <div className="flex justify-between items-center">
                                                 <div>
                                                     <p className="font-semibold text-lg">${order.total?.toFixed(2)}</p>
-                                                    <p className="text-sm text-slate-500">{order.items?.length || 0} items</p>
+                                                    <p className="text-sm text-slate-500">{items.length} items</p>
                                                 </div>
                                                 <Button
                                                     variant="outline"

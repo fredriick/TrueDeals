@@ -62,7 +62,19 @@ export default function Orders() {
             <h1 className="text-3xl font-bold mb-8">Your Orders</h1>
             <div className="space-y-4">
                 {orders.map((order) => {
-                    const items = typeof order.items === 'string' ? JSON.parse(order.items || '[]') : (order.items || []);
+                    // Safe parsing helper
+                    let items: any[] = [];
+                    try {
+                        if (typeof order.items === 'string') {
+                            items = JSON.parse(order.items);
+                        } else if (Array.isArray(order.items)) {
+                            items = order.items.map((i: any) => typeof i === 'string' ? JSON.parse(i) : i);
+                        }
+                    } catch (e) {
+                        console.error('Error parsing order items:', e);
+                        items = [];
+                    }
+
                     return (
                         <div key={order.$id} className="bg-white border rounded-lg p-6 shadow-sm">
                             <div className="flex flex-col md:flex-row justify-between md:items-center mb-4">
@@ -75,8 +87,9 @@ export default function Orders() {
                                         order.status === 'processing' ? 'bg-blue-100 text-blue-800' :
                                             order.status === 'shipped' ? 'bg-purple-100 text-purple-800' :
                                                 order.status === 'delivered' ? 'bg-green-100 text-green-800' :
-                                                    order.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                                                        'bg-slate-100 text-slate-800'
+                                                    order.status === 'paid' ? 'bg-emerald-100 text-emerald-800' :
+                                                        order.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                                                            'bg-slate-100 text-slate-800'
                                         }`}>
                                         {(order.status || 'pending').charAt(0).toUpperCase() + (order.status || 'pending').slice(1)}
                                     </span>
@@ -84,9 +97,16 @@ export default function Orders() {
                             </div>
 
                             <div className="border-t pt-4">
-                                <div className="flex justify-between items-center">
+                                <div className="flex flex-col gap-2 mb-4">
+                                    {items.map((item, idx) => (
+                                        <div key={idx} className="flex justify-between items-center text-sm">
+                                            <span className="text-slate-700">{item.quantity}x {item.name}</span>
+                                            <span className="text-slate-500">${(item.price * item.quantity).toFixed(2)}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="flex justify-between items-center border-t border-dashed pt-2">
                                     <div>
-                                        <p className="font-medium">{items.length} Item{items.length !== 1 ? 's' : ''}</p>
                                         <p className="text-sm text-slate-500 truncate max-w-md">{order.address}</p>
                                     </div>
                                     <p className="text-xl font-bold">${(order.total || 0).toFixed(2)}</p>

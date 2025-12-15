@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
 import { databases } from '@/lib/appwrite';
-import { ID, Query } from 'appwrite';
+import { Query } from 'appwrite';
 import { Search, Eye, X } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
-import { Button } from '@/components/ui/Button';
 import { AppwriteImage } from '@/components/ui/AppwriteImage';
 
 type OrderStatus = 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
@@ -260,25 +259,48 @@ export default function AdminOrders() {
                                 </div>
                             </div>
 
+                            {/* Payment & Coupon Info */}
+                            <div>
+                                <h3 className="font-semibold text-lg mb-3">Payment & Discount</h3>
+                                <div className="bg-slate-50 p-4 rounded-lg space-y-2 text-sm">
+                                    <p><span className="font-medium">Payment Ref:</span> <span className="font-mono">{selectedOrder.paymentReference || 'N/A'}</span></p>
+                                    <p><span className="font-medium">Coupon Used:</span> {selectedOrder.couponCode || 'None'}</p>
+                                    <p><span className="font-medium">Discount:</span> -${selectedOrder.discount?.toFixed(2) || '0.00'}</p>
+                                </div>
+                            </div>
+
                             {/* Order Items */}
                             <div>
                                 <h3 className="font-semibold text-lg mb-3">Order Items</h3>
                                 <div className="space-y-3">
-                                    {selectedOrder.items?.map((item: any, index: number) => (
-                                        <div key={index} className="flex gap-4 p-3 border rounded-lg">
-                                            <div className="w-20 h-20 bg-slate-100 rounded-md overflow-hidden flex-shrink-0">
-                                                {item.imageId && <AppwriteImage fileId={item.imageId} alt={item.name} />}
+                                    {(() => {
+                                        let items: any[] = [];
+                                        try {
+                                            if (typeof selectedOrder.items === 'string') {
+                                                items = JSON.parse(selectedOrder.items);
+                                            } else if (Array.isArray(selectedOrder.items)) {
+                                                items = selectedOrder.items.map((i: any) => typeof i === 'string' ? JSON.parse(i) : i);
+                                            }
+                                        } catch (e) {
+                                            console.error('Error parsing items', e);
+                                        }
+
+                                        return items.map((item: any, index: number) => (
+                                            <div key={index} className="flex gap-4 p-3 border rounded-lg">
+                                                <div className="w-20 h-20 bg-slate-100 rounded-md overflow-hidden flex-shrink-0 flex items-center justify-center">
+                                                    {item.imageId ? <AppwriteImage fileId={item.imageId} alt={item.name} /> : <span className="text-xs text-slate-400">No Img</span>}
+                                                </div>
+                                                <div className="flex-1">
+                                                    <p className="font-medium">{item.name}</p>
+                                                    <p className="text-sm text-slate-500">Quantity: {item.quantity}</p>
+                                                    <p className="text-sm text-slate-500">Price: ${item.price?.toFixed(2)}</p>
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className="font-semibold">${(item.price * item.quantity).toFixed(2)}</p>
+                                                </div>
                                             </div>
-                                            <div className="flex-1">
-                                                <p className="font-medium">{item.name}</p>
-                                                <p className="text-sm text-slate-500">Quantity: {item.quantity}</p>
-                                                <p className="text-sm text-slate-500">Price: ${item.price?.toFixed(2)}</p>
-                                            </div>
-                                            <div className="text-right">
-                                                <p className="font-semibold">${(item.price * item.quantity).toFixed(2)}</p>
-                                            </div>
-                                        </div>
-                                    ))}
+                                        ));
+                                    })()}
                                 </div>
                             </div>
 

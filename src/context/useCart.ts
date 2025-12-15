@@ -26,13 +26,15 @@ export const useCart = create<CartStore>()(
             addItem: (product) => {
                 const items = get().items;
                 const existingItem = items.find((i) => i.$id === product.$id);
+                // Determine effective price
+                const effectivePrice = (product.onSale && product.salePrice > 0) ? product.salePrice : product.price;
 
                 if (existingItem) {
                     if (existingItem.quantity < existingItem.maxQuantity) {
                         set({
                             items: items.map((i) =>
                                 i.$id === product.$id
-                                    ? { ...i, quantity: i.quantity + 1 }
+                                    ? { ...i, quantity: i.quantity + 1, price: effectivePrice } // Update price in case it changed
                                     : i
                             ),
                         });
@@ -46,7 +48,7 @@ export const useCart = create<CartStore>()(
                             {
                                 $id: product.$id,
                                 name: product.name,
-                                price: product.price,
+                                price: effectivePrice,
                                 imageId: product.images && product.images.length > 0 ? product.images[0] : product.imageId,
                                 quantity: 1,
                                 maxQuantity: product.quantity,
