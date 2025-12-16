@@ -4,6 +4,7 @@ import { Query } from 'appwrite';
 import { Button } from '@/components/ui/Button';
 import { Link } from 'react-router-dom';
 import { ProductCard } from '@/components/ui/ProductCard';
+import { ShatteredText } from '@/components/ui/ShatteredText';
 
 export default function Home() {
     const [categories, setCategories] = useState<string[]>([]);
@@ -56,13 +57,16 @@ export default function Home() {
             <section className="relative bg-primary text-primary-foreground py-32 overflow-hidden">
                 <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white via-transparent to-transparent" />
                 <div className="container mx-auto px-4 text-center space-y-8 relative z-10">
-                    <h1 className="text-6xl md:text-7xl font-black tracking-tighter">
-                        Find Your <span className="text-secondary">Unique</span> Style
+                    <h1 className="text-6xl md:text-7xl font-black tracking-tighter flex flex-wrap justify-center gap-x-4">
+                        <ShatteredText text="Find Your" />
+                        <ShatteredText text="Unique" className="text-secondary" />
+                        <ShatteredText text="Style" />
                     </h1>
-                    <p className="text-xl md:text-2xl text-slate-300 max-w-2xl mx-auto font-light leading-relaxed">
-                        Curated vintage, streetwear, and one-of-a-kind pieces.
-                        Sustainable fashion that doesn't cost the earth.
-                    </p>
+                    <div className="text-xl md:text-2xl text-slate-300 max-w-2xl mx-auto font-light leading-relaxed">
+                        <ShatteredText
+                            text="Curated vintage, streetwear, and one-of-a-kind pieces. Sustainable fashion that doesn't cost the earth."
+                        />
+                    </div>
                     <div className="flex justify-center gap-6 pt-4">
                         <Link to="/shop">
                             <Button size="lg" className="bg-secondary text-secondary-foreground hover:bg-secondary/90 text-lg px-8 py-6 rounded-xl font-bold">
