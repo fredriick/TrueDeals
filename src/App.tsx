@@ -17,6 +17,7 @@ import AdminCategories from './pages/admin/AdminCategories';
 import AdminOrders from './pages/admin/AdminOrders';
 import AdminCoupons from './pages/admin/AdminCoupons';
 import VerifyEmail from './pages/VerifyEmail';
+import OrderTracking from './pages/OrderTracking';
 
 function App() {
     return (
@@ -30,6 +31,7 @@ function App() {
                         <Route path="/product/:id" element={<ProductDetails />} />
                         <Route path="/cart" element={<Cart />} />
                         <Route path="/orders" element={<Orders />} />
+                        <Route path="/order-tracking/:orderId" element={<OrderTracking />} />
                         <Route path="/profile" element={<Profile />} />
                         <Route path="/login" element={<Login />} />
                         <Route path="/register" element={<Register />} />

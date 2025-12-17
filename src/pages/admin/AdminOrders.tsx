@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { databases } from '@/lib/appwrite';
 import { Query } from 'appwrite';
-import { Search, Eye, X } from 'lucide-react';
+import { Search, Eye, X, Package } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
 import { AppwriteImage } from '@/components/ui/AppwriteImage';
+import { orderStatusService } from '@/services/orderStatusService';
+import { emailService } from '@/services/emailService';
 
-type OrderStatus = 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+type OrderStatus = 'pending' | 'processing' | 'shipped' | 'out_for_delivery' | 'delivered' | 'cancelled';
 
 export default function AdminOrders() {
     const [orders, setOrders] = useState<any[]>([]);
@@ -14,6 +16,7 @@ export default function AdminOrders() {
     const [statusFilter, setStatusFilter] = useState<string>('all');
     const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
     const [loading, setLoading] = useState(true);
+    const [trackingInfo, setTrackingInfo] = useState({ trackingNumber: '', carrier: 'UPS', estimatedDelivery: '' });
 
     useEffect(() => {
         fetchOrders();
@@ -58,9 +61,8 @@ export default function AdminOrders() {
 
     const updateOrderStatus = async (orderId: string, newStatus: OrderStatus) => {
         try {
-            await databases.updateDocument('thrift_store', 'orders', orderId, {
-                status: newStatus
-            });
+            // Use orderStatusService to update status and create history
+            await orderStatusService.updateOrderStatus(orderId, newStatus, 'admin', `Status updated to ${newStatus}`);
 
             // Update local state
             setOrders(orders.map(order =>
@@ -70,9 +72,61 @@ export default function AdminOrders() {
             if (selectedOrder?.$id === orderId) {
                 setSelectedOrder({ ...selectedOrder, status: newStatus });
             }
+
+            // Send email notification based on status
+            const order = orders.find(o => o.$id === orderId);
+            if (order) {
+                const emailData = {
+                    orderId: order.$id,
+                    orderNumber: order.$id.slice(-8).toUpperCase(),
+                    customerName: order.userName || 'Customer',
+                    customerEmail: order.userEmail,
+                    total: order.total,
+                    items: typeof order.items === 'string' ? JSON.parse(order.items) : order.items,
+                    trackingNumber: order.trackingNumber,
+                    carrier: order.carrier,
+                    estimatedDelivery: order.estimatedDelivery
+                };
+
+                if (newStatus === 'shipped') {
+                    await emailService.sendShippingNotification(emailData);
+                } else if (newStatus === 'delivered') {
+                    await emailService.sendDeliveryConfirmation(emailData);
+                } else if (newStatus === 'cancelled') {
+                    await emailService.sendCancellationNotification(emailData);
+                }
+            }
+
+            alert('Order status updated successfully!');
         } catch (error) {
             console.error('Failed to update order status:', error);
             alert('Failed to update order status');
+        }
+    };
+
+    const addTrackingInfo = async (orderId: string) => {
+        if (!trackingInfo.trackingNumber || !trackingInfo.carrier) {
+            alert('Please enter tracking number and carrier');
+            return;
+        }
+
+        try {
+            await orderStatusService.addTrackingInfo(orderId, trackingInfo);
+
+            // Update local state
+            setOrders(orders.map(order =>
+                order.$id === orderId ? { ...order, ...trackingInfo } : order
+            ));
+
+            if (selectedOrder?.$id === orderId) {
+                setSelectedOrder({ ...selectedOrder, ...trackingInfo });
+            }
+
+            setTrackingInfo({ trackingNumber: '', carrier: 'UPS', estimatedDelivery: '' });
+            alert('Tracking information added successfully!');
+        } catch (error) {
+            console.error('Failed to add tracking info:', error);
+            alert('Failed to add tracking information');
         }
     };
 
@@ -81,13 +135,14 @@ export default function AdminOrders() {
             pending: 'bg-yellow-100 text-yellow-800',
             processing: 'bg-blue-100 text-blue-800',
             shipped: 'bg-purple-100 text-purple-800',
+            out_for_delivery: 'bg-pink-100 text-pink-800',
             delivered: 'bg-green-100 text-green-800',
             cancelled: 'bg-red-100 text-red-800',
         };
         return statusMap[status] || 'bg-slate-100 text-slate-800';
     };
 
-    const statusOptions: OrderStatus[] = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
+    const statusOptions: OrderStatus[] = ['pending', 'processing', 'shipped', 'out_for_delivery', 'delivered', 'cancelled'];
 
     if (loading) {
         return <div className="p-8 text-center">Loading orders...</div>;
@@ -254,9 +309,70 @@ export default function AdminOrders() {
                                         ))}
                                     </select>
                                     <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(selectedOrder.status || 'pending')}`}>
-                                        Current: {(selectedOrder.status || 'pending').charAt(0).toUpperCase() + (selectedOrder.status || 'pending').slice(1)}
+                                        Current: {(selectedOrder.status || 'pending').split('_').map(word =>
+                                            word.charAt(0).toUpperCase() + word.slice(1)
+                                        ).join(' ')}
                                     </span>
                                 </div>
+                            </div>
+
+                            {/* Tracking Information */}
+                            <div>
+                                <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
+                                    <Package className="h-5 w-5" />
+                                    Tracking Information
+                                </h3>
+                                {selectedOrder.trackingNumber ? (
+                                    <div className="bg-green-50 border border-green-200 p-4 rounded-lg space-y-2">
+                                        <p><span className="font-medium">Tracking Number:</span> <span className="font-mono">{selectedOrder.trackingNumber}</span></p>
+                                        <p><span className="font-medium">Carrier:</span> {selectedOrder.carrier}</p>
+                                        {selectedOrder.estimatedDelivery && (
+                                            <p><span className="font-medium">Estimated Delivery:</span> {new Date(selectedOrder.estimatedDelivery).toLocaleDateString()}</p>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div className="bg-slate-50 p-4 rounded-lg space-y-3">
+                                        <p className="text-sm text-slate-600">No tracking information added yet</p>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div>
+                                                <label className="block text-sm font-medium mb-1">Tracking Number</label>
+                                                <Input
+                                                    type="text"
+                                                    placeholder="1Z999AA10123456784"
+                                                    value={trackingInfo.trackingNumber}
+                                                    onChange={(e) => setTrackingInfo({ ...trackingInfo, trackingNumber: e.target.value })}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium mb-1">Carrier</label>
+                                                <select
+                                                    className="w-full border rounded-md px-3 py-2 bg-white"
+                                                    value={trackingInfo.carrier}
+                                                    onChange={(e) => setTrackingInfo({ ...trackingInfo, carrier: e.target.value })}
+                                                >
+                                                    <option value="UPS">UPS</option>
+                                                    <option value="FedEx">FedEx</option>
+                                                    <option value="DHL">DHL</option>
+                                                    <option value="USPS">USPS</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium mb-1">Estimated Delivery (Optional)</label>
+                                            <Input
+                                                type="date"
+                                                value={trackingInfo.estimatedDelivery}
+                                                onChange={(e) => setTrackingInfo({ ...trackingInfo, estimatedDelivery: e.target.value })}
+                                            />
+                                        </div>
+                                        <button
+                                            onClick={() => addTrackingInfo(selectedOrder.$id)}
+                                            className="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+                                        >
+                                            Add Tracking Info
+                                        </button>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Payment & Coupon Info */}

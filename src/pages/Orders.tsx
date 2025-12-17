@@ -76,23 +76,44 @@ export default function Orders() {
                     }
 
                     return (
-                        <div key={order.$id} className="bg-white border rounded-lg p-6 shadow-sm">
-                            <div className="flex flex-col md:flex-row justify-between md:items-center mb-4">
-                                <div>
-                                    <p className="text-sm text-slate-500">Order ID: <span className="font-mono text-xs">{order.$id}</span></p>
-                                    <p className="text-sm text-slate-500">Date: {new Date(order.$createdAt).toLocaleDateString()}</p>
+                        <div key={order.$id} className="bg-white border rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
+                            <div className="flex flex-col md:flex-row justify-between md:items-start mb-4 gap-4">
+                                <div className="flex-1">
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <p className="text-sm text-slate-500">Order #{order.$id.slice(-8).toUpperCase()}</p>
+                                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${(order.status || 'pending') === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                                order.status === 'processing' ? 'bg-blue-100 text-blue-800' :
+                                                    order.status === 'shipped' ? 'bg-purple-100 text-purple-800' :
+                                                        order.status === 'out_for_delivery' ? 'bg-pink-100 text-pink-800' :
+                                                            order.status === 'delivered' ? 'bg-green-100 text-green-800' :
+                                                                order.status === 'paid' ? 'bg-emerald-100 text-emerald-800' :
+                                                                    order.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                                                                        'bg-slate-100 text-slate-800'
+                                            }`}>
+                                            {(order.status || 'pending').split('_').map((word: string) =>
+                                                word.charAt(0).toUpperCase() + word.slice(1)
+                                            ).join(' ')}
+                                        </span>
+                                    </div>
+                                    <p className="text-sm text-slate-500">
+                                        Ordered on {new Date(order.$createdAt).toLocaleDateString('en-US', {
+                                            year: 'numeric',
+                                            month: 'long',
+                                            day: 'numeric'
+                                        })}
+                                    </p>
+                                    {order.trackingNumber && (
+                                        <p className="text-sm text-slate-600 mt-2">
+                                            <span className="font-medium">Tracking:</span> {order.trackingNumber}
+                                        </p>
+                                    )}
                                 </div>
-                                <div className="mt-2 md:mt-0">
-                                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${(order.status || 'pending') === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                                        order.status === 'processing' ? 'bg-blue-100 text-blue-800' :
-                                            order.status === 'shipped' ? 'bg-purple-100 text-purple-800' :
-                                                order.status === 'delivered' ? 'bg-green-100 text-green-800' :
-                                                    order.status === 'paid' ? 'bg-emerald-100 text-emerald-800' :
-                                                        order.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                                                            'bg-slate-100 text-slate-800'
-                                        }`}>
-                                        {(order.status || 'pending').charAt(0).toUpperCase() + (order.status || 'pending').slice(1)}
-                                    </span>
+                                <div className="flex gap-2">
+                                    <Link to={`/order-tracking/${order.$id}`}>
+                                        <Button variant="outline" size="sm">
+                                            Track Order
+                                        </Button>
+                                    </Link>
                                 </div>
                             </div>
 
@@ -106,10 +127,10 @@ export default function Orders() {
                                     ))}
                                 </div>
                                 <div className="flex justify-between items-center border-t border-dashed pt-2">
-                                    <div>
+                                    <div className="flex-1">
                                         <p className="text-sm text-slate-500 truncate max-w-md">{order.address}</p>
                                     </div>
-                                    <p className="text-xl font-bold">${(order.total || 0).toFixed(2)}</p>
+                                    <p className="text-xl font-bold ml-4">${(order.total || 0).toFixed(2)}</p>
                                 </div>
                             </div>
                         </div>
