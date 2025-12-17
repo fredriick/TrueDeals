@@ -16,6 +16,7 @@ import AdminProducts from './pages/admin/AdminProducts';
 import AdminCategories from './pages/admin/AdminCategories';
 import AdminOrders from './pages/admin/AdminOrders';
 import AdminCoupons from './pages/admin/AdminCoupons';
+import VerifyEmail from './pages/VerifyEmail';
 
 function App() {
     return (
@@ -32,6 +33,7 @@ function App() {
                         <Route path="/profile" element={<Profile />} />
                         <Route path="/login" element={<Login />} />
                         <Route path="/register" element={<Register />} />
+                        <Route path="/verify" element={<VerifyEmail />} />
                     </Route>
 
                     {/* Admin Routes */}

@@ -12,20 +12,47 @@ export default function Login() {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [showVerificationWarning, setShowVerificationWarning] = useState(false);
+    const [resendingVerification, setResendingVerification] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
         setLoading(true);
+        setShowVerificationWarning(false);
 
         try {
             await account.createEmailPasswordSession(email, password);
+
+            // Check if email is verified
+            const user = await account.get();
+            if (!user.emailVerification) {
+                setShowVerificationWarning(true);
+                setError('Please verify your email before logging in. Check your inbox for the verification link.');
+                await account.deleteSession('current'); // Log them out
+                setLoading(false);
+                return;
+            }
+
             await checkUser();
             navigate('/');
         } catch (err: any) {
             setError(err.message || 'Failed to login');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleResendVerification = async () => {
+        setResendingVerification(true);
+        try {
+            const verificationUrl = `${window.location.origin}/verify`;
+            await account.createVerification(verificationUrl);
+            alert('Verification email sent! Please check your inbox.');
+        } catch (err: any) {
+            setError('Failed to resend verification email. Please try again.');
+        } finally {
+            setResendingVerification(false);
         }
     };
 
@@ -61,6 +88,18 @@ export default function Login() {
                 <Button type="submit" className="w-full" disabled={loading}>
                     {loading ? 'Logging in...' : 'Login'}
                 </Button>
+
+                {showVerificationWarning && (
+                    <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full mt-2"
+                        onClick={handleResendVerification}
+                        disabled={resendingVerification}
+                    >
+                        {resendingVerification ? 'Sending...' : 'Resend Verification Email'}
+                    </Button>
+                )}
             </form>
 
             <p className="mt-4 text-center text-sm text-slate-600">

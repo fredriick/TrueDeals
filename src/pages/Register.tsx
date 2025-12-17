@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useAuth } from '@/context/AuthContext';
 import { account, databases } from '@/lib/appwrite';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -7,7 +6,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ID } from 'appwrite';
 
 export default function Register() {
-    const { checkUser } = useAuth();
     const navigate = useNavigate();
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
@@ -25,10 +23,10 @@ export default function Register() {
             const userId = ID.unique();
             await account.create(userId, email, password, name);
 
-            // 2. Login
+            // 2. Login to get session (required for createVerification)
             await account.createEmailPasswordSession(email, password);
 
-            // 3. Create Profile (optional, but good practice)
+            // 3. Create Profile
             try {
                 await databases.createDocument(
                     'thrift_store',
@@ -36,16 +34,22 @@ export default function Register() {
                     ID.unique(),
                     {
                         userId: userId,
-                        // Add other profile fields if needed
                     }
                 );
             } catch (profileErr) {
                 console.error('Failed to create profile:', profileErr);
-                // Don't block registration if profile creation fails
             }
 
-            await checkUser();
-            navigate('/');
+            // 4. Send Verification Email (requires active session)
+            const verificationUrl = `${window.location.origin}/verify`;
+            await account.createVerification(verificationUrl);
+
+            // 5. Logout (they must verify before using the account)
+            await account.deleteSession('current');
+
+            // 6. Show success message and redirect to login
+            alert('Account created! Please check your email to verify your account before logging in.');
+            navigate('/login?verified=pending');
         } catch (err: any) {
             setError(err.message || 'Failed to register');
         } finally {

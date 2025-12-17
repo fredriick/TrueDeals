@@ -62,10 +62,17 @@ export default function Home() {
                         <ShatteredText text="Unique" className="text-secondary" />
                         <ShatteredText text="Style" />
                     </h1>
-                    <div className="text-xl md:text-2xl text-slate-300 max-w-2xl mx-auto font-light leading-relaxed">
-                        <ShatteredText
-                            text="Curated vintage, streetwear, and one-of-a-kind pieces. Sustainable fashion that doesn't cost the earth."
-                        />
+                    <div className="text-xl md:text-2xl text-slate-300 max-w-2xl mx-auto font-light leading-relaxed space-y-2">
+                        <div>
+                            <ShatteredText
+                                text="Curated vintage, streetwear, and one-of-a-kind pieces."
+                            />
+                        </div>
+                        <div>
+                            <ShatteredText
+                                text="Sustainable fashion that doesn't cost the earth."
+                            />
+                        </div>
                     </div>
                     <div className="flex justify-center gap-6 pt-4">
                         <Link to="/shop">
