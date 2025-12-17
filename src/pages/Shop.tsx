@@ -4,7 +4,7 @@ import { Query } from 'appwrite';
 import { ProductCard } from '@/components/ui/ProductCard';
 import { Input } from '@/components/ui/Input';
 import { useSearchParams } from 'react-router-dom';
-import { X, SlidersHorizontal } from 'lucide-react';
+import { SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
 export default function Shop() {
@@ -132,6 +132,8 @@ export default function Shop() {
                 return b.price - a.price;
             case 'newest':
                 return new Date(b.$createdAt).getTime() - new Date(a.$createdAt).getTime();
+            case 'popularity':
+                return (b.viewCount || 0) - (a.viewCount || 0);
             case 'name':
                 return a.name.localeCompare(b.name);
             default:
@@ -172,6 +174,7 @@ export default function Shop() {
                         onChange={(e) => setSortBy(e.target.value)}
                     >
                         <option value="newest">Newest First</option>
+                        <option value="popularity">Most Popular</option>
                         <option value="price-asc">Price: Low to High</option>
                         <option value="price-desc">Price: High to Low</option>
                         <option value="name">Name: A-Z</option>
