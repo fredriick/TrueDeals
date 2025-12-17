@@ -19,6 +19,8 @@ import AdminCoupons from './pages/admin/AdminCoupons';
 import VerifyEmail from './pages/VerifyEmail';
 import OrderTracking from './pages/OrderTracking';
 import AdminAnalytics from './pages/admin/AdminAnalytics';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 
 function App() {
     return (
@@ -37,6 +39,8 @@ function App() {
                         <Route path="/login" element={<Login />} />
                         <Route path="/register" element={<Register />} />
                         <Route path="/verify" element={<VerifyEmail />} />
+                        <Route path="/forgot-password" element={<ForgotPassword />} />
+                        <Route path="/reset-password" element={<ResetPassword />} />
                     </Route>
 
                     {/* Admin Routes */}

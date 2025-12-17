@@ -89,6 +89,12 @@ export default function Login() {
                     {loading ? 'Logging in...' : 'Login'}
                 </Button>
 
+                <div className="text-right text-sm">
+                    <Link to="/forgot-password" className="text-blue-600 hover:underline">
+                        Forgot Password?
+                    </Link>
+                </div>
+
                 {showVerificationWarning && (
                     <Button
                         type="button"
