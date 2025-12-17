@@ -4,11 +4,12 @@ import { databases } from '@/lib/appwrite';
 import { ID, Query } from 'appwrite';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { ArrowLeft, BadgeCheck } from 'lucide-react';
+import { ArrowLeft, BadgeCheck, Eye } from 'lucide-react';
 import { useCart } from '@/context/useCart';
 import { useAuth } from '@/context/AuthContext';
 import { AppwriteImage } from '@/components/ui/AppwriteImage';
 import { StarRating } from '@/components/ui/StarRating';
+import { analyticsService } from '@/services/analyticsService';
 
 export default function ProductDetails() {
     const { id } = useParams();
@@ -17,6 +18,7 @@ export default function ProductDetails() {
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
     const { addItem } = useCart();
     const { user } = useAuth();
+    const [showViewCount, setShowViewCount] = useState(false);
 
     // Reviews state
     const [reviews, setReviews] = useState<any[]>([]);
@@ -31,8 +33,19 @@ export default function ProductDetails() {
         if (id) {
             fetchProduct(id);
             fetchReviews(id);
+            trackView(id);
+            checkViewCountVisibility();
         }
     }, [id]);
+
+    const trackView = async (productId: string) => {
+        await analyticsService.trackProductView(productId, user?.$id);
+    };
+
+    const checkViewCountVisibility = async () => {
+        const shouldShow = await analyticsService.shouldShowViewCounts();
+        setShowViewCount(shouldShow);
+    };
 
     const fetchProduct = async (productId: string) => {
         try {
@@ -149,14 +162,22 @@ export default function ProductDetails() {
                     <div>
                         <h1 className="text-3xl font-bold text-slate-900">{product.name}</h1>
                         <p className="text-slate-500 mt-2">{product.category} • {product.size}</p>
-                        {reviews.length > 0 && (
-                            <div className="flex items-center gap-2 mt-3">
-                                <StarRating rating={averageRating} readonly size="sm" />
-                                <span className="text-sm text-slate-600">
-                                    {averageRating.toFixed(1)} ({reviews.length} {reviews.length === 1 ? 'review' : 'reviews'})
-                                </span>
-                            </div>
-                        )}
+                        <div className="flex items-center gap-4 mt-3 flex-wrap">
+                            {reviews.length > 0 && (
+                                <div className="flex items-center gap-2">
+                                    <StarRating rating={averageRating} readonly size="sm" />
+                                    <span className="text-sm text-slate-600">
+                                        {averageRating.toFixed(1)} ({reviews.length} {reviews.length === 1 ? 'review' : 'reviews'})
+                                    </span>
+                                </div>
+                            )}
+                            {showViewCount && product.viewCount > 0 && (
+                                <div className="flex items-center gap-1 text-sm text-slate-500">
+                                    <Eye className="w-4 h-4" />
+                                    <span>{analyticsService.formatCount(product.viewCount)} views</span>
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     <div className="text-3xl font-bold text-slate-900">

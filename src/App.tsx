@@ -18,6 +18,7 @@ import AdminOrders from './pages/admin/AdminOrders';
 import AdminCoupons from './pages/admin/AdminCoupons';
 import VerifyEmail from './pages/VerifyEmail';
 import OrderTracking from './pages/OrderTracking';
+import AdminAnalytics from './pages/admin/AdminAnalytics';
 
 function App() {
     return (
@@ -45,6 +46,7 @@ function App() {
                         <Route path="categories" element={<AdminCategories />} />
                         <Route path="orders" element={<AdminOrders />} />
                         <Route path="coupons" element={<AdminCoupons />} />
+                        <Route path="analytics" element={<AdminAnalytics />} />
                     </Route>
                 </Routes>
             </AuthProvider>
